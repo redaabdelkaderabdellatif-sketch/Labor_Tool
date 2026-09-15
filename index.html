@@ -143,11 +143,11 @@ function computeHours(start, end, breakMin, workers) {
 }
 
 async function apiPost(action, payload) {
-  const res = await fetch(CONFIG.SCRIPT_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(Object.assign({ action }, payload||{}))
-  });
+  const url = new URL(CONFIG.SCRIPT_URL);
+  url.searchParams.set("action", action);
+  url.searchParams.set("data", JSON.stringify(payload||{}));
+  const res = await fetch(url.toString(), { method: "GET" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
 
@@ -208,26 +208,32 @@ async function loadAll(silent) {
 async function handleAuthSubmit(ev) {
   ev.preventDefault();
   STATE.authError = "";
-  if (STATE.authMode === "login") {
-    if (!AUTH_FORM.username || !AUTH_FORM.password) {
-      STATE.authError = "من فضلك اكتب اليوزر والباسورد"; render(); return;
+  try {
+    if (STATE.authMode === "login") {
+      if (!AUTH_FORM.username || !AUTH_FORM.password) {
+        STATE.authError = "من فضلك اكتب اليوزر والباسورد"; render(); return;
+      }
+      render_loginBtnLoading(true);
+      const res = await apiPost("login", { username: AUTH_FORM.username, password: AUTH_FORM.password });
+      if (!res.ok) { STATE.authError = res.error || "حصل خطأ"; render(); return; }
+      STATE.auth = { username: res.username, token: res.token, role: res.role, displayName: res.displayName };
+      saveAuthLocal();
+      await loadAll(true);
+    } else {
+      if (!AUTH_FORM.username || !AUTH_FORM.password || !AUTH_FORM.displayName) {
+        STATE.authError = "من فضلك املأ كل الحقول"; render(); return;
+      }
+      render_loginBtnLoading(true);
+      const res = await apiPost("signup", { username: AUTH_FORM.username, password: AUTH_FORM.password, displayName: AUTH_FORM.displayName });
+      if (!res.ok) { STATE.authError = res.error || "حصل خطأ"; render(); return; }
+      STATE.auth = { username: res.username, token: res.token, role: res.role, displayName: res.displayName };
+      saveAuthLocal();
+      await loadAll(true);
     }
-    render_loginBtnLoading(true);
-    const res = await apiPost("login", { username: AUTH_FORM.username, password: AUTH_FORM.password });
-    if (!res.ok) { STATE.authError = res.error || "حصل خطأ"; render(); return; }
-    STATE.auth = { username: res.username, token: res.token, role: res.role, displayName: res.displayName };
-    saveAuthLocal();
-    await loadAll(true);
-  } else {
-    if (!AUTH_FORM.username || !AUTH_FORM.password || !AUTH_FORM.displayName) {
-      STATE.authError = "من فضلك املأ كل الحقول"; render(); return;
-    }
-    render_loginBtnLoading(true);
-    const res = await apiPost("signup", { username: AUTH_FORM.username, password: AUTH_FORM.password, displayName: AUTH_FORM.displayName });
-    if (!res.ok) { STATE.authError = res.error || "حصل خطأ"; render(); return; }
-    STATE.auth = { username: res.username, token: res.token, role: res.role, displayName: res.displayName };
-    saveAuthLocal();
-    await loadAll(true);
+  } catch (e) {
+    STATE.authError = "تعذر الاتصال بالسيرفر، تأكد من الإنترنت وحاول تاني";
+    STATE.loading = false;
+    render();
   }
 }
 
