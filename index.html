@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>دفتر الورشة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #F6F1E7; --panel: #FFFDF9; --ink: #2E2620;
@@ -167,10 +167,41 @@ function loadAuthLocal() {
 }
 function clearAuthLocal() { localStorage.removeItem("warsha_auth"); }
 
+function saveDataCache() {
+  try {
+    localStorage.setItem("warsha_cache", JSON.stringify({
+      settings: STATE.settings, entries: STATE.entries,
+      role: STATE.auth.role, displayName: STATE.auth.displayName
+    }));
+  } catch(e) {}
+}
+function loadDataCache() {
+  try {
+    const raw = localStorage.getItem("warsha_cache");
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
 async function boot() {
   const saved = loadAuthLocal();
   if (saved) {
     STATE.auth = saved;
+    const cached = loadDataCache();
+    if (cached) {
+      // اعرض آخر بيانات محفوظة فورًا من غير ما تستنى النت
+      STATE.settings = cached.settings;
+      STATE.entries = cached.entries;
+      STATE.auth.role = cached.role;
+      STATE.auth.displayName = cached.displayName;
+      if (STATE.auth.role === "supervisor") FORM.supervisor = STATE.auth.displayName;
+      if (!FORM.department) FORM.department = (STATE.settings.departments || [])[0] || "";
+      STATE.loading = false;
+      STATE.booted = true;
+      render();
+      loadAll(true); // حدّث في الخلفية من غير ما توقف الشاشة
+      return;
+    }
     await loadAll(true);
   } else {
     STATE.loading = false;
@@ -198,6 +229,7 @@ async function loadAll(silent) {
     if (STATE.auth.role === "supervisor") FORM.supervisor = STATE.auth.displayName;
     if (!FORM.department) FORM.department = (STATE.settings.departments || [])[0] || "";
     STATE.error = "";
+    saveDataCache();
   } catch (e) {
     STATE.error = "تعذر الاتصال بالسيرفر. تأكد من اتصال الإنترنت وحاول تاني.";
   }
@@ -244,6 +276,7 @@ function render_loginBtnLoading(v) {
 
 function logout() {
   clearAuthLocal();
+  localStorage.removeItem("warsha_cache");
   STATE.auth = null;
   STATE.entries = [];
   STATE.tab = "new";
@@ -305,7 +338,30 @@ async function removeUser(username) {
   } catch(e) { STATE.error = "تعذر الحذف"; render(); }
 }
 
-function exportExcel() {
+let _xlsxLoading = null;
+function loadXLSX() {
+  if (window.XLSX) return Promise.resolve();
+  if (_xlsxLoading) return _xlsxLoading;
+  _xlsxLoading = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("failed to load xlsx"));
+    document.head.appendChild(s);
+  });
+  return _xlsxLoading;
+}
+
+async function exportExcel() {
+  const btn = document.getElementById("exportBtn");
+  if (btn) { btn.disabled = true; btn.innerText = "جاري التجهيز..."; }
+  try {
+    await loadXLSX();
+  } catch (e) {
+    STATE.error = "تعذر تحميل مكتبة التصدير، تأكد من الإنترنت وحاول تاني";
+    render();
+    return;
+  }
   const rows = STATE.entries.map(en => ({
     "التاريخ": en.date, "المشرف": en.supervisor, "رقم الطلب": en.orderNo, "القسم": en.department,
     "عدد العمال": en.workers, "من": en.start, "الى": en.end, "الاستراحة (دقيقة)": en.breakMin,
@@ -317,6 +373,7 @@ function exportExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "السجل");
   XLSX.writeFile(wb, "سجل_ساعات_العمل.xlsx");
+  if (btn) { btn.disabled = false; btn.innerText = "⬇ تصدير Excel"; }
 }
 
 function computeSummary() {
@@ -472,7 +529,7 @@ function render() {
       <div class="card">
         <div class="log-header">
           <h2 class="card-title">السجل (${STATE.entries.length})</h2>
-          <button class="export-btn" onclick="exportExcel()">⬇ تصدير Excel</button>
+          <button class="export-btn" id="exportBtn" onclick="exportExcel()">⬇ تصدير Excel</button>
         </div>
         <div class="table-wrap"><table>
           <thead><tr>${["التاريخ","المشرف","رقم الطلب","القسم","العمال","من","الى","استراحة","ساعات فعلية","ساعات عمل",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
