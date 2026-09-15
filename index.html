@@ -9,29 +9,22 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
-    --bg: #F6F1E7;
-    --panel: #FFFDF9;
-    --ink: #2E2620;
-    --walnut: #6B4226;
-    --walnut-dark: #4A2E19;
-    --amber: #C68642;
-    --border: #E0D3BC;
-    --border-soft: #EFE6D6;
-    --muted: #8A7A63;
-    --danger: #B4483D;
-    --danger-bg: #FBEAE6;
-    --danger-border: #E9C3BB;
+    --bg: #F6F1E7; --panel: #FFFDF9; --ink: #2E2620;
+    --walnut: #6B4226; --walnut-dark: #4A2E19; --amber: #C68642;
+    --border: #E0D3BC; --border-soft: #EFE6D6; --muted: #8A7A63;
+    --danger: #B4483D; --danger-bg: #FBEAE6; --danger-border: #E9C3BB;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--ink); line-height: 1.5; }
   .loading-wrap { display:flex; align-items:center; justify-content:center; padding:48px 16px; color: var(--walnut); gap:8px; }
-  .spin { animation: spin 1s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
 
   .header { background: linear-gradient(135deg, var(--walnut) 0%, var(--walnut-dark) 100%); padding: 20px 24px; }
-  .header-inner { display:flex; align-items:center; gap:12px; max-width:1100px; margin:0 auto; }
+  .header-inner { display:flex; align-items:center; justify-content:space-between; gap:12px; max-width:1100px; margin:0 auto; flex-wrap:wrap; }
+  .header-left { display:flex; align-items:center; gap:12px; }
   .title { font-family:'Cairo',sans-serif; font-weight:800; font-size:22px; color: var(--bg); margin:0; }
   .subtitle { margin:2px 0 0; font-size:13px; color:#D9C6AE; }
+  .logout-btn { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); color:#F6F1E7; padding:8px 14px; border-radius:8px; cursor:pointer; font-family:'Tajawal',sans-serif; font-size:13px; }
+  .whoami { color:#F1E4D0; font-size:13px; }
 
   .tabs { display:flex; gap:4px; padding:10px 16px 0; max-width:1100px; margin:0 auto; border-bottom:1px solid var(--border); flex-wrap:wrap; }
   .tab-btn { display:flex; align-items:center; gap:6px; padding:10px 16px; background:transparent; border:none; border-bottom:3px solid transparent; color: var(--muted); font-family:'Tajawal',sans-serif; font-size:14px; font-weight:500; cursor:pointer; }
@@ -46,7 +39,11 @@
   .grid2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:14px; }
   .field { display:flex; flex-direction:column; gap:6px; }
   .field-label { font-size:13px; color: var(--muted); font-weight:500; }
-  .input, select, input[type=text], input[type=number], input[type=time] { font-family:'Tajawal',sans-serif; font-size:14px; padding:10px 12px; border-radius:8px; border:1px solid #DDD0BC; background:#fff; color: var(--ink); outline:none; width:100%; }
+  .input, select { font-family:'Tajawal',sans-serif; font-size:14px; padding:10px 12px; border-radius:8px; border:1px solid #DDD0BC; background:#fff; color: var(--ink); outline:none; width:100%; }
+  .time-pair { display:flex; align-items:center; gap:6px; }
+  .time-pair select { width:auto; flex:1; text-align:center; }
+  .time-colon { font-weight:700; color: var(--muted); }
+  .locked-name { padding:10px 12px; border-radius:8px; background:#F1E4D0; color: var(--walnut-dark); font-weight:700; }
 
   .preview-box { margin-top:20px; display:flex; align-items:center; justify-content:center; gap:24px; background:#F6EFE3; border:1px dashed var(--amber); border-radius:10px; padding:16px 20px; flex-wrap:wrap; }
   .preview-item { display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -60,7 +57,7 @@
   .log-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
   .export-btn { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; border:1px solid var(--amber); background:#fff; color: var(--walnut); font-family:'Tajawal',sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
 
-  table { width:100%; border-collapse:collapse; font-size:13px; min-width:720px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; min-width:640px; }
   th { text-align:right; background:#F1E4D0; color: var(--walnut-dark); padding:10px; font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; }
   td { padding:9px 10px; border-bottom:1px solid var(--border-soft); white-space:nowrap; }
   .table-wrap { overflow-x:auto; }
@@ -79,6 +76,16 @@
   .setup-card { max-width:640px; margin:48px auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:28px; }
   .setup-card h2 { font-family:'Cairo',sans-serif; color:var(--walnut-dark); margin-top:0; }
   .setup-card code { background:#F1E4D0; padding:2px 6px; border-radius:4px; font-size:13px; }
+
+  .auth-wrap { max-width:400px; margin:60px auto; padding:0 16px; }
+  .auth-card { background: var(--panel); border:1px solid var(--border); border-radius:14px; padding:28px; box-shadow:0 2px 8px rgba(74,46,25,0.08); }
+  .auth-title { font-family:'Cairo',sans-serif; font-size:20px; font-weight:800; color: var(--walnut-dark); text-align:center; margin:0 0 4px; }
+  .auth-sub { text-align:center; color: var(--muted); font-size:13px; margin:0 0 20px; }
+  .auth-field { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .auth-switch { text-align:center; margin-top:14px; font-size:13px; color: var(--muted); }
+  .auth-switch a { color: var(--walnut); font-weight:700; cursor:pointer; text-decoration:none; }
+  .role-badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+  .role-admin { background:#E6E1D3; color:var(--walnut-dark); }
 </style>
 </head>
 <body>
@@ -92,14 +99,30 @@ const CONFIG = {
 };
 /* =========================================== */
 
-const DEFAULT_SETTINGS = {
-  supervisors: ["مشرف 1","مشرف 2","مشرف 3","مشرف 4","مشرف 5","مشرف 6","مشرف 7","مشرف 8","مشرف 9","مشرف 10"],
-  departments: ["نجارة","دهان","تنجيد","أرزة"],
-  hourlyRate: 0
+let STATE = {
+  loading: true, booted: false,
+  authMode: "login", // "login" | "signup"
+  auth: null, // {username, token, role, displayName}
+  settings: { departments: ["نجارة","دهان","تنجيد","أرزة"], hourlyRate: 0 },
+  entries: [], users: [],
+  tab: "new", saving: false, error: "", authError: ""
 };
+let FORM = { supervisor: "", orderNo: "", department: "", workers: "", start: "", end: "", breakMin: "", startH: "", startM: "", endH: "", endM: "" };
+let AUTH_FORM = { username: "", password: "", displayName: "" };
 
-let STATE = { loading: true, settings: DEFAULT_SETTINGS, entries: [], tab: "new", saving: false, error: "" };
-let FORM = { supervisor: "", orderNo: "", department: "", workers: "", start: "", end: "", breakMin: "" };
+function pad2(n) { return String(n).padStart(2, "0"); }
+function hourOptions(selected) {
+  let opts = `<option value="" ${selected===""?'selected':''}>--</option>`;
+  for (let h=0; h<24; h++) { const v = pad2(h); opts += `<option value="${v}" ${selected===v?'selected':''}>${v}</option>`; }
+  return opts;
+}
+function minuteOptions(selected) {
+  let opts = `<option value="" ${selected===""?'selected':''}>--</option>`;
+  for (let m=0; m<60; m++) { const v = pad2(m); opts += `<option value="${v}" ${selected===v?'selected':''}>${v}</option>`; }
+  return opts;
+}
+function updateStart() { FORM.start = (FORM.startH && FORM.startM) ? (FORM.startH + ":" + FORM.startM) : ""; renderPreview(); }
+function updateEnd() { FORM.end = (FORM.endH && FORM.endM) ? (FORM.endH + ":" + FORM.endM) : ""; renderPreview(); }
 
 function timeToMinutes(t) {
   if (!t) return null;
@@ -119,13 +142,6 @@ function computeHours(start, end, breakMin, workers) {
   return { actualHours, laborHours: actualHours*w };
 }
 
-async function apiGet(action, params) {
-  const url = new URL(CONFIG.SCRIPT_URL);
-  url.searchParams.set("action", action);
-  if (params) Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));
-  const res = await fetch(url.toString());
-  return res.json();
-}
 async function apiPost(action, payload) {
   const res = await fetch(CONFIG.SCRIPT_URL, {
     method: "POST",
@@ -135,76 +151,152 @@ async function apiPost(action, payload) {
   return res.json();
 }
 
+function authPayload() {
+  return { username: STATE.auth.username, token: STATE.auth.token };
+}
+
+function saveAuthLocal() {
+  localStorage.setItem("warsha_auth", JSON.stringify(STATE.auth));
+}
+function loadAuthLocal() {
+  try {
+    const raw = localStorage.getItem("warsha_auth");
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+function clearAuthLocal() { localStorage.removeItem("warsha_auth"); }
+
+async function boot() {
+  const saved = loadAuthLocal();
+  if (saved) {
+    STATE.auth = saved;
+    await loadAll(true);
+  } else {
+    STATE.loading = false;
+  }
+  STATE.booted = true;
+  render();
+}
+
 async function loadAll(silent) {
   if (!silent) { STATE.loading = true; render(); }
   try {
-    const data = await apiGet("getData");
-    if (data.error) throw new Error(data.error);
-    STATE.settings = data.settings || DEFAULT_SETTINGS;
+    const data = await apiPost("getData", authPayload());
+    if (!data.ok) {
+      clearAuthLocal();
+      STATE.auth = null;
+      STATE.error = "";
+      STATE.loading = false;
+      render();
+      return;
+    }
+    STATE.settings = data.settings;
     STATE.entries = data.entries || [];
-    if (!FORM.supervisor) FORM.supervisor = STATE.settings.supervisors[0] || "";
-    if (!FORM.department) FORM.department = STATE.settings.departments[0] || "";
+    STATE.auth.role = data.role;
+    STATE.auth.displayName = data.displayName;
+    if (STATE.auth.role === "supervisor") FORM.supervisor = STATE.auth.displayName;
+    if (!FORM.department) FORM.department = (STATE.settings.departments || [])[0] || "";
     STATE.error = "";
   } catch (e) {
-    STATE.error = "تعذر الاتصال بجوجل شيت. تأكد إن الرابط في CONFIG.SCRIPT_URL مظبوط والنشر شغال.";
+    STATE.error = "تعذر الاتصال بالسيرفر. تأكد من اتصال الإنترنت وحاول تاني.";
   }
   STATE.loading = false;
   render();
 }
 
+async function handleAuthSubmit(ev) {
+  ev.preventDefault();
+  STATE.authError = "";
+  if (STATE.authMode === "login") {
+    if (!AUTH_FORM.username || !AUTH_FORM.password) {
+      STATE.authError = "من فضلك اكتب اليوزر والباسورد"; render(); return;
+    }
+    render_loginBtnLoading(true);
+    const res = await apiPost("login", { username: AUTH_FORM.username, password: AUTH_FORM.password });
+    if (!res.ok) { STATE.authError = res.error || "حصل خطأ"; render(); return; }
+    STATE.auth = { username: res.username, token: res.token, role: res.role, displayName: res.displayName };
+    saveAuthLocal();
+    await loadAll(true);
+  } else {
+    if (!AUTH_FORM.username || !AUTH_FORM.password || !AUTH_FORM.displayName) {
+      STATE.authError = "من فضلك املأ كل الحقول"; render(); return;
+    }
+    render_loginBtnLoading(true);
+    const res = await apiPost("signup", { username: AUTH_FORM.username, password: AUTH_FORM.password, displayName: AUTH_FORM.displayName });
+    if (!res.ok) { STATE.authError = res.error || "حصل خطأ"; render(); return; }
+    STATE.auth = { username: res.username, token: res.token, role: res.role, displayName: res.displayName };
+    saveAuthLocal();
+    await loadAll(true);
+  }
+}
+
+function render_loginBtnLoading(v) {
+  const btn = document.getElementById("authSubmitBtn");
+  if (btn) { btn.disabled = v; btn.innerText = v ? "جاري الدخول..." : (STATE.authMode==="login"?"دخول":"إنشاء حساب"); }
+}
+
+function logout() {
+  clearAuthLocal();
+  STATE.auth = null;
+  STATE.entries = [];
+  STATE.tab = "new";
+  render();
+}
+
 async function handleSubmit(ev) {
   ev.preventDefault();
-  if (!FORM.supervisor || !FORM.orderNo || !FORM.department || !FORM.start || !FORM.end) {
-    STATE.error = "من فضلك املأ المشرف ورقم الطلب والقسم ووقت البداية والنهاية";
-    render();
-    return;
+  const supervisorName = STATE.auth.role === "admin" ? FORM.supervisor : STATE.auth.displayName;
+  if (!supervisorName || !FORM.orderNo || !FORM.department || !FORM.start || !FORM.end) {
+    STATE.error = "من فضلك املأ رقم الطلب والقسم ووقت البداية والنهاية"; render(); return;
   }
-  STATE.error = "";
-  STATE.saving = true;
-  render();
+  STATE.error = ""; STATE.saving = true; render();
   const { actualHours, laborHours } = computeHours(FORM.start, FORM.end, FORM.breakMin, FORM.workers);
   const entry = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
     date: new Date().toISOString().slice(0,10),
-    supervisor: FORM.supervisor,
-    orderNo: FORM.orderNo,
-    department: FORM.department,
-    workers: Number(FORM.workers)||0,
-    start: FORM.start,
-    end: FORM.end,
-    breakMin: Number(FORM.breakMin)||0,
+    supervisor: supervisorName, orderNo: FORM.orderNo, department: FORM.department,
+    workers: Number(FORM.workers)||0, start: FORM.start, end: FORM.end, breakMin: Number(FORM.breakMin)||0,
     actualHours, laborHours
   };
   try {
-    await apiPost("addEntry", { entry });
-    FORM.orderNo = ""; FORM.workers = ""; FORM.start = ""; FORM.end = ""; FORM.breakMin = "";
+    const res = await apiPost("addEntry", Object.assign({ entry }, authPayload()));
+    if (!res.ok) throw new Error(res.error||"error");
+    FORM.orderNo=""; FORM.workers=""; FORM.start=""; FORM.end=""; FORM.breakMin="";
+    FORM.startH=""; FORM.startM=""; FORM.endH=""; FORM.endM="";
     await loadAll(true);
-  } catch(e) {
-    STATE.error = "تعذر حفظ التسجيلة، حاول تاني";
-  }
-  STATE.saving = false;
-  render();
+  } catch(e) { STATE.error = "تعذر حفظ التسجيلة، حاول تاني"; }
+  STATE.saving = false; render();
 }
 
 async function handleDelete(id) {
   try {
-    await apiPost("deleteEntry", { id });
+    const res = await apiPost("deleteEntry", Object.assign({ id }, authPayload()));
+    if (!res.ok) throw new Error();
     await loadAll(true);
-  } catch(e) {
-    STATE.error = "تعذر حذف التسجيلة";
-    render();
-  }
+  } catch(e) { STATE.error = "تعذر حذف التسجيلة"; render(); }
 }
 
 async function saveSettings(next) {
-  STATE.settings = next;
-  render();
+  STATE.settings = next; render();
   try {
-    await apiPost("saveSettings", { settings: next });
-  } catch(e) {
-    STATE.error = "تعذر حفظ الإعدادات";
-    render();
-  }
+    const res = await apiPost("saveSettings", Object.assign({ settings: next }, authPayload()));
+    if (!res.ok) throw new Error();
+  } catch(e) { STATE.error = "تعذر حفظ الإعدادات"; render(); }
+}
+
+async function loadUsers() {
+  try {
+    const res = await apiPost("listUsers", authPayload());
+    if (res.ok) { STATE.users = res.users; render(); }
+  } catch(e) {}
+}
+async function removeUser(username) {
+  try {
+    const res = await apiPost("deleteUser", Object.assign({ username }, authPayload()));
+    if (!res.ok) { STATE.error = res.error || "تعذر الحذف"; render(); return; }
+    await loadUsers();
+  } catch(e) { STATE.error = "تعذر الحذف"; render(); }
 }
 
 function exportExcel() {
@@ -235,35 +327,85 @@ function computeSummary() {
 
 function esc(s) { const d=document.createElement("div"); d.innerText = s==null?"":s; return d.innerHTML; }
 
+function renderAuthScreen() {
+  const isLogin = STATE.authMode === "login";
+  return `
+    <div class="header"><div class="header-inner"><div class="header-left">
+      <span style="font-size:26px;">🔨</span>
+      <div><h1 class="title">دفتر الورشة</h1><p class="subtitle">متابعة ساعات الإنتاج لكل طلب بيع</p></div>
+    </div></div></div>
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <h2 class="auth-title">${isLogin ? "تسجيل الدخول" : "إنشاء حساب جديد"}</h2>
+        <p class="auth-sub">${isLogin ? "ادخل بيانات حسابك" : "أول حساب في النظام بيبقى أدمن تلقائيًا"}</p>
+        ${STATE.authError ? `<div class="error-banner" style="margin:0 0 14px;">${esc(STATE.authError)}</div>` : ""}
+        <form id="authForm">
+          ${!isLogin ? `
+          <div class="auth-field">
+            <span class="field-label">اسمك (هيظهر في السجل)</span>
+            <input class="input" value="${esc(AUTH_FORM.displayName)}" oninput="AUTH_FORM.displayName=this.value">
+          </div>` : ""}
+          <div class="auth-field">
+            <span class="field-label">اسم المستخدم</span>
+            <input class="input" value="${esc(AUTH_FORM.username)}" oninput="AUTH_FORM.username=this.value">
+          </div>
+          <div class="auth-field">
+            <span class="field-label">الباسورد</span>
+            <input type="password" class="input" value="${esc(AUTH_FORM.password)}" oninput="AUTH_FORM.password=this.value">
+          </div>
+          <button type="submit" id="authSubmitBtn" class="submit-btn">${isLogin ? "دخول" : "إنشاء حساب"}</button>
+        </form>
+        <div class="auth-switch">
+          ${isLogin ? `مالكش حساب؟ <a onclick="switchAuthMode('signup')">اعمل حساب جديد</a>`
+                    : `عندك حساب بالفعل؟ <a onclick="switchAuthMode('login')">سجل دخول</a>`}
+        </div>
+      </div>
+    </div>`;
+}
+
+function switchAuthMode(mode) {
+  STATE.authMode = mode; STATE.authError = "";
+  AUTH_FORM = { username: "", password: "", displayName: "" };
+  render();
+}
+
 function render() {
   const app = document.getElementById("app");
 
   if (CONFIG.SCRIPT_URL.includes("PASTE_YOUR")) {
-    app.innerHTML = `
-      <div class="setup-card">
-        <h2>خطوة إعداد ناقصة</h2>
-        <p>لازم تحط رابط جوجل أبس سكريبت في متغير <code>CONFIG.SCRIPT_URL</code> جوه ملف index.html.</p>
-        <p>اتبع خطوات ملف google_apps_script.gs.txt عشان تعمل النشر وتجيب الرابط.</p>
-      </div>`;
+    app.innerHTML = `<div class="setup-card"><h2>خطوة إعداد ناقصة</h2><p>حط رابط جوجل أبس سكريبت في <code>CONFIG.SCRIPT_URL</code>.</p></div>`;
     return;
   }
-
+  if (!STATE.booted) {
+    app.innerHTML = `<div class="loading-wrap">⏳ جاري التحميل...</div>`;
+    return;
+  }
+  if (!STATE.auth) {
+    app.innerHTML = renderAuthScreen();
+    const f = document.getElementById("authForm");
+    if (f) f.addEventListener("submit", handleAuthSubmit);
+    return;
+  }
   if (STATE.loading) {
-    app.innerHTML = `<div class="loading-wrap"><span class="spin">⏳</span><span>جاري تحميل البيانات...</span></div>`;
+    app.innerHTML = `<div class="loading-wrap">⏳ جاري تحميل البيانات...</div>`;
     return;
   }
 
-  const tabs = [
-    { id:"new", label:"تسجيل جديد" },
-    { id:"log", label:"السجل" },
-    { id:"summary", label:"الملخص" },
-    { id:"settings", label:"الإعدادات" }
-  ];
+  const isAdmin = STATE.auth.role === "admin";
+  const tabs = isAdmin
+    ? [ {id:"new", label:"تسجيل جديد"}, {id:"log", label:"السجل"}, {id:"summary", label:"الملخص"}, {id:"settings", label:"الإعدادات"} ]
+    : [ {id:"new", label:"تسجيل جديد"}, {id:"mylog", label:"سجلي"} ];
 
   let html = `
     <div class="header"><div class="header-inner">
-      <span style="font-size:26px;">🔨</span>
-      <div><h1 class="title">دفتر الورشة</h1><p class="subtitle">متابعة ساعات الإنتاج لكل طلب بيع</p></div>
+      <div class="header-left">
+        <span style="font-size:26px;">🔨</span>
+        <div><h1 class="title">دفتر الورشة</h1><p class="subtitle">متابعة ساعات الإنتاج لكل طلب بيع</p></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="whoami">${esc(STATE.auth.displayName)} ${isAdmin?'<span class="role-badge role-admin">أدمن</span>':''}</span>
+        <button class="logout-btn" onclick="logout()">خروج</button>
+      </div>
     </div></div>
     <nav class="tabs">
       ${tabs.map(t=>`<button class="tab-btn ${STATE.tab===t.id?'active':''}" onclick="setTab('${t.id}')">${t.label}</button>`).join("")}
@@ -277,26 +419,34 @@ function render() {
       <form class="card" id="entryForm">
         <div class="grid2">
           <label class="field"><span class="field-label">المشرف</span>
-            <select onchange="FORM.supervisor=this.value">
-              ${STATE.settings.supervisors.map(s=>`<option value="${esc(s)}" ${FORM.supervisor===s?'selected':''}>${esc(s)}</option>`).join("")}
-            </select>
+            ${isAdmin
+              ? `<input class="input" value="${esc(FORM.supervisor)}" oninput="FORM.supervisor=this.value" placeholder="اكتب اسم المشرف">`
+              : `<div class="locked-name">${esc(STATE.auth.displayName)}</div>`}
           </label>
           <label class="field"><span class="field-label">رقم الطلب</span>
             <input class="input" value="${esc(FORM.orderNo)}" oninput="FORM.orderNo=this.value" placeholder="مثال: 1024">
           </label>
           <label class="field"><span class="field-label">القسم</span>
             <select onchange="FORM.department=this.value">
-              ${STATE.settings.departments.map(d=>`<option value="${esc(d)}" ${FORM.department===d?'selected':''}>${esc(d)}</option>`).join("")}
+              ${(STATE.settings.departments||[]).map(d=>`<option value="${esc(d)}" ${FORM.department===d?'selected':''}>${esc(d)}</option>`).join("")}
             </select>
           </label>
           <label class="field"><span class="field-label">عدد العمال</span>
             <input type="number" min="0" class="input" value="${esc(FORM.workers)}" oninput="FORM.workers=this.value; renderPreview();" placeholder="0">
           </label>
           <label class="field"><span class="field-label">وقت البداية</span>
-            <input type="time" class="input" value="${esc(FORM.start)}" oninput="FORM.start=this.value; renderPreview();">
+            <div class="time-pair">
+              <select onchange="FORM.startH=this.value; updateStart();">${hourOptions(FORM.startH)}</select>
+              <span class="time-colon">:</span>
+              <select onchange="FORM.startM=this.value; updateStart();">${minuteOptions(FORM.startM)}</select>
+            </div>
           </label>
           <label class="field"><span class="field-label">وقت النهاية</span>
-            <input type="time" class="input" value="${esc(FORM.end)}" oninput="FORM.end=this.value; renderPreview();">
+            <div class="time-pair">
+              <select onchange="FORM.endH=this.value; updateEnd();">${hourOptions(FORM.endH)}</select>
+              <span class="time-colon">:</span>
+              <select onchange="FORM.endM=this.value; updateEnd();">${minuteOptions(FORM.endM)}</select>
+            </div>
           </label>
           <label class="field"><span class="field-label">الاستراحة (دقيقة)</span>
             <input type="number" min="0" class="input" value="${esc(FORM.breakMin)}" oninput="FORM.breakMin=this.value; renderPreview();" placeholder="0">
@@ -311,7 +461,7 @@ function render() {
       </form>`;
   }
 
-  if (STATE.tab === "log") {
+  if (STATE.tab === "log" && isAdmin) {
     html += `
       <div class="card">
         <div class="log-header">
@@ -334,45 +484,53 @@ function render() {
       </div>`;
   }
 
-  if (STATE.tab === "summary") {
-    const summary = computeSummary();
+  if (STATE.tab === "mylog" && !isAdmin) {
     html += `
       <div class="card">
-        <h2 class="card-title">ملخص حسب رقم الطلب</h2>
+        <h2 class="card-title">سجلي (${STATE.entries.length})</h2>
         <div class="table-wrap"><table>
-          <thead><tr><th>رقم الطلب</th>${STATE.settings.departments.map(d=>`<th>${esc(d)}</th>`).join("")}<th>إجمالي ساعات العمل</th><th>تكلفة العمالة</th></tr></thead>
+          <thead><tr>${["التاريخ","رقم الطلب","القسم","العمال","من","الى","استراحة","ساعات فعلية","ساعات عمل"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
           <tbody>
-            ${summary.map(row=>`
+            ${STATE.entries.slice().reverse().map(en=>`
               <tr>
-                <td>${esc(row.orderNo)}</td>
-                ${STATE.settings.departments.map(d=>`<td>${(row.depts[d]||0).toFixed(2)}</td>`).join("")}
-                <td style="font-weight:700">${row.total.toFixed(2)}</td>
-                <td style="font-weight:700; color:var(--walnut)">${row.cost.toFixed(2)}</td>
+                <td>${esc(en.date)}</td><td>${esc(en.orderNo)}</td><td>${esc(en.department)}</td>
+                <td>${esc(en.workers)}</td><td>${esc(en.start)}</td><td>${esc(en.end)}</td><td>${esc(en.breakMin)}</td>
+                <td>${Number(en.actualHours).toFixed(2)}</td><td>${Number(en.laborHours).toFixed(2)}</td>
               </tr>`).join("")}
-            ${summary.length===0 ? `<tr><td colspan="${STATE.settings.departments.length+3}" class="empty-row">لسه مفيش بيانات</td></tr>` : ""}
+            ${STATE.entries.length===0 ? `<tr><td colspan="9" class="empty-row">لسه مفيش تسجيلات ليك</td></tr>` : ""}
           </tbody>
         </table></div>
       </div>`;
   }
 
-  if (STATE.tab === "settings") {
+  if (STATE.tab === "summary" && isAdmin) {
+    const summary = computeSummary();
+    html += `
+      <div class="card">
+        <h2 class="card-title">ملخص حسب رقم الطلب</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>رقم الطلب</th>${(STATE.settings.departments||[]).map(d=>`<th>${esc(d)}</th>`).join("")}<th>إجمالي ساعات العمل</th><th>تكلفة العمالة</th></tr></thead>
+          <tbody>
+            ${summary.map(row=>`
+              <tr>
+                <td>${esc(row.orderNo)}</td>
+                ${(STATE.settings.departments||[]).map(d=>`<td>${(row.depts[d]||0).toFixed(2)}</td>`).join("")}
+                <td style="font-weight:700">${row.total.toFixed(2)}</td>
+                <td style="font-weight:700; color:var(--walnut)">${row.cost.toFixed(2)}</td>
+              </tr>`).join("")}
+            ${summary.length===0 ? `<tr><td colspan="${(STATE.settings.departments||[]).length+3}" class="empty-row">لسه مفيش بيانات</td></tr>` : ""}
+          </tbody>
+        </table></div>
+      </div>`;
+  }
+
+  if (STATE.tab === "settings" && isAdmin) {
     html += `
       <div class="settings-grid">
         <div class="card">
-          <h2 class="card-title">المشرفين</h2>
-          <ul class="list">
-            ${STATE.settings.supervisors.map(s=>`
-              <li class="list-item"><span>${esc(s)}</span><button class="small-delete" onclick="removeSupervisor('${esc(s)}')">✕</button></li>`).join("")}
-          </ul>
-          <div class="add-row">
-            <input class="input" id="newSupervisor" placeholder="اسم مشرف جديد">
-            <button class="add-btn" onclick="addSupervisor()">+</button>
-          </div>
-        </div>
-        <div class="card">
           <h2 class="card-title">الأقسام</h2>
           <ul class="list">
-            ${STATE.settings.departments.map(d=>`
+            ${(STATE.settings.departments||[]).map(d=>`
               <li class="list-item"><span>${esc(d)}</span><button class="small-delete" onclick="removeDept('${esc(d)}')">✕</button></li>`).join("")}
           </ul>
           <div class="add-row">
@@ -380,22 +538,38 @@ function render() {
             <button class="add-btn" onclick="addDept()">+</button>
           </div>
         </div>
+
         <div class="card">
           <h2 class="card-title">سعر الساعة</h2>
           <div class="add-row">
             <input type="number" min="0" class="input" id="rateInput" value="${STATE.settings.hourlyRate}">
             <button class="add-btn" onclick="saveRate()">حفظ</button>
           </div>
-          <p class="note">جنيه لكل ساعة عمل. بيتضرب في إجمالي ساعات العمل لحساب التكلفة في الملخص.</p>
+          <p class="note">جنيه لكل ساعة عمل، بيتضرب في إجمالي ساعات العمل في الملخص.</p>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">حسابات المشرفين</h2>
+          <ul class="list">
+            ${STATE.users.map(u=>`
+              <li class="list-item">
+                <span>${esc(u.displayName)} (${esc(u.username)}) ${u.role==='admin'?'<span class="role-badge role-admin">أدمن</span>':''}</span>
+                ${u.role!=='admin' ? `<button class="small-delete" onclick="removeUser('${esc(u.username)}')">✕</button>` : ''}
+              </li>`).join("")}
+            ${STATE.users.length===0 ? `<li class="list-item">جاري التحميل...</li>` : ""}
+          </ul>
+          <p class="note">كل مشرف بيعمل حسابه بنفسه من شاشة "إنشاء حساب جديد". تقدر تحذف أي حساب مشرف من هنا.</p>
         </div>
       </div>`;
   }
 
-  html += `</main><footer class="footer">البيانات هنا محفوظة في جوجل شيت ومشتركة بين كل المشرفين</footer>`;
+  html += `</main><footer class="footer">البيانات هنا محفوظة في جوجل شيت ومشتركة بين كل المستخدمين حسب صلاحياتهم</footer>`;
   app.innerHTML = html;
 
   const form = document.getElementById("entryForm");
   if (form) form.addEventListener("submit", handleSubmit);
+
+  if (STATE.tab === "settings" && isAdmin && STATE.users.length===0) loadUsers();
 }
 
 function renderPreview() {
@@ -411,21 +585,13 @@ function renderPreview() {
 
 function setTab(id) { STATE.tab = id; STATE.error = ""; render(); }
 
-function addSupervisor() {
-  const input = document.getElementById("newSupervisor");
-  const val = input.value.trim();
-  if (val) saveSettings(Object.assign({}, STATE.settings, { supervisors: [...STATE.settings.supervisors, val] }));
-}
-function removeSupervisor(name) {
-  saveSettings(Object.assign({}, STATE.settings, { supervisors: STATE.settings.supervisors.filter(s=>s!==name) }));
-}
 function addDept() {
   const input = document.getElementById("newDept");
   const val = input.value.trim();
-  if (val) saveSettings(Object.assign({}, STATE.settings, { departments: [...STATE.settings.departments, val] }));
+  if (val) saveSettings(Object.assign({}, STATE.settings, { departments: [...(STATE.settings.departments||[]), val] }));
 }
 function removeDept(name) {
-  saveSettings(Object.assign({}, STATE.settings, { departments: STATE.settings.departments.filter(d=>d!==name) }));
+  saveSettings(Object.assign({}, STATE.settings, { departments: (STATE.settings.departments||[]).filter(d=>d!==name) }));
 }
 function saveRate() {
   const val = Number(document.getElementById("rateInput").value) || 0;
@@ -433,8 +599,8 @@ function saveRate() {
 }
 
 render();
-loadAll();
-setInterval(() => { if (STATE.tab==="log" || STATE.tab==="summary") loadAll(true); }, 20000);
+boot();
+setInterval(() => { if (STATE.auth && (STATE.tab==="log" || STATE.tab==="summary" || STATE.tab==="mylog")) loadAll(true); }, 20000);
 </script>
 </body>
 </html>
