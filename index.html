@@ -1,321 +1,778 @@
-/**
- * دفتر الورشة - كود جوجل أبس سكريبت (نسخة فيها: دخول برقم الهاتف + استرجاع باسورد + حساب مراقبة)
- *
- * لو الشيت عندك اتعمل قبل كده بكود قديم فيه Users sheet مختلفة الأعمدة:
- * احذف تاب "Users" بالكامل من الشيت (كليك يمين على اسم التاب > Delete) قبل ما تنشر الكود ده،
- * عشان يتعمل من جديد بالأعمدة الصح تلقائيًا. البيانات في Entries و Settings مش هتتأثر.
- *
- * طريقة النشر: Deploy > Manage deployments > قلم التعديل > Version: New version > Deploy
- */
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دفتر الورشة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F1E7; --panel: #FFFDF9; --ink: #2E2620;
+    --walnut: #6B4226; --walnut-dark: #4A2E19; --amber: #C68642;
+    --border: #E0D3BC; --border-soft: #EFE6D6; --muted: #8A7A63;
+    --danger: #B4483D; --danger-bg: #FBEAE6; --danger-border: #E9C3BB;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--ink); line-height: 1.5; }
+  .loading-wrap { display:flex; align-items:center; justify-content:center; padding:48px 16px; color: var(--walnut); gap:8px; }
 
-var SECRET = "warsha-2026-x7q9-secret";
+  .header { background: linear-gradient(135deg, var(--walnut) 0%, var(--walnut-dark) 100%); padding: 20px 24px; }
+  .header-inner { display:flex; align-items:center; justify-content:space-between; gap:12px; max-width:1100px; margin:0 auto; flex-wrap:wrap; }
+  .header-left { display:flex; align-items:center; gap:12px; }
+  .title { font-family:'Cairo',sans-serif; font-weight:800; font-size:22px; color: var(--bg); margin:0; }
+  .subtitle { margin:2px 0 0; font-size:13px; color:#D9C6AE; }
+  .logout-btn { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); color:#F6F1E7; padding:8px 14px; border-radius:8px; cursor:pointer; font-family:'Tajawal',sans-serif; font-size:13px; }
+  .whoami { color:#F1E4D0; font-size:13px; }
 
-function doGet(e) { return handleRequest(e); }
-function doPost(e) { return handleRequest(e); }
+  .tabs { display:flex; gap:4px; padding:10px 16px 0; max-width:1100px; margin:0 auto; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .tab-btn { display:flex; align-items:center; gap:6px; padding:10px 16px; background:transparent; border:none; border-bottom:3px solid transparent; color: var(--muted); font-family:'Tajawal',sans-serif; font-size:14px; font-weight:500; cursor:pointer; }
+  .tab-btn.active { color: var(--walnut); border-bottom:3px solid var(--amber); font-weight:700; }
 
-function handleRequest(e) {
+  .error-banner { max-width:1100px; margin:16px auto 0; background: var(--danger-bg); color: var(--danger); border:1px solid var(--danger-border); border-radius:8px; padding:10px 14px; font-size:14px; }
+
+  main { max-width:1100px; margin:0 auto; padding:20px 16px 48px; }
+  .card { background: var(--panel); border:1px solid var(--border); border-radius:12px; padding:22px; box-shadow:0 1px 3px rgba(74,46,25,0.06); margin-bottom:20px; }
+  .card-title { font-family:'Cairo',sans-serif; font-size:17px; font-weight:700; margin:0 0 14px; color: var(--walnut-dark); }
+
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:14px; }
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field-label { font-size:13px; color: var(--muted); font-weight:500; }
+  .input, select { font-family:'Tajawal',sans-serif; font-size:14px; padding:10px 12px; border-radius:8px; border:1px solid #DDD0BC; background:#fff; color: var(--ink); outline:none; width:100%; }
+  .time-pair { display:flex; align-items:center; gap:6px; }
+  .time-pair select { width:auto; flex:1; text-align:center; }
+  .time-colon { font-weight:700; color: var(--muted); }
+  .locked-name { padding:10px 12px; border-radius:8px; background:#F1E4D0; color: var(--walnut-dark); font-weight:700; }
+
+  .preview-box { margin-top:20px; display:flex; align-items:center; justify-content:center; gap:24px; background:#F6EFE3; border:1px dashed var(--amber); border-radius:10px; padding:16px 20px; flex-wrap:wrap; }
+  .preview-item { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .preview-label { font-size:12px; color: var(--muted); }
+  .preview-value { font-family:'Cairo',sans-serif; font-size:24px; font-weight:800; color: var(--walnut); }
+  .preview-divider { width:1px; height:36px; background: var(--border); }
+
+  .submit-btn { margin-top:20px; width:100%; padding:12px 0; border-radius:8px; border:none; background: var(--walnut); color: var(--bg); font-family:'Cairo',sans-serif; font-weight:700; font-size:15px; cursor:pointer; }
+  .submit-btn:disabled { opacity:0.6; cursor:default; }
+
+  .log-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+  .export-btn { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; border:1px solid var(--amber); background:#fff; color: var(--walnut); font-family:'Tajawal',sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; min-width:640px; }
+  th { text-align:right; background:#F1E4D0; color: var(--walnut-dark); padding:10px; font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; }
+  td { padding:9px 10px; border-bottom:1px solid var(--border-soft); white-space:nowrap; }
+  .table-wrap { overflow-x:auto; }
+  .delete-btn { border:none; background:transparent; color: var(--danger); cursor:pointer; padding:4px; font-size:14px; }
+  .empty-row { text-align:center; padding:24px 0; color: var(--muted); }
+
+  .settings-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:16px; }
+  ul.list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .list-item { display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:#F6EFE3; border-radius:6px; font-size:13px; }
+  .small-delete { border:none; background:transparent; color: var(--danger); cursor:pointer; }
+  .add-row { display:flex; gap:8px; }
+  .add-btn { display:flex; align-items:center; justify-content:center; padding:0 14px; border-radius:8px; border:none; background: var(--walnut); color: var(--bg); cursor:pointer; font-family:'Tajawal',sans-serif; font-weight:700; font-size:13px; }
+  .note { margin-top:10px; font-size:12px; color: var(--muted); }
+  .footer { text-align:center; font-size:12px; color: var(--muted); padding:0 16px 24px; }
+
+  .setup-card { max-width:640px; margin:48px auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:28px; }
+  .setup-card h2 { font-family:'Cairo',sans-serif; color:var(--walnut-dark); margin-top:0; }
+  .setup-card code { background:#F1E4D0; padding:2px 6px; border-radius:4px; font-size:13px; }
+
+  .auth-wrap { max-width:400px; margin:60px auto; padding:0 16px; }
+  .auth-card { background: var(--panel); border:1px solid var(--border); border-radius:14px; padding:28px; box-shadow:0 2px 8px rgba(74,46,25,0.08); }
+  .auth-title { font-family:'Cairo',sans-serif; font-size:20px; font-weight:800; color: var(--walnut-dark); text-align:center; margin:0 0 4px; }
+  .auth-sub { text-align:center; color: var(--muted); font-size:13px; margin:0 0 20px; }
+  .auth-field { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .auth-switch { text-align:center; margin-top:14px; font-size:13px; color: var(--muted); }
+  .auth-switch a { color: var(--walnut); font-weight:700; cursor:pointer; text-decoration:none; }
+  .role-badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+  .role-admin { background:#E6E1D3; color:var(--walnut-dark); }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+/* ============ اضبط ده أول حاجة ============ */
+const CONFIG = {
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwuUpp4eCD_oEAI9RQJyDu_D7tclQUWThf0C_m1TiYYzTfmw7IIyJYkhJgHH2pUfTZ6/exec"
+};
+/* =========================================== */
+
+let STATE = {
+  loading: true, booted: false,
+  authMode: "login", // "login" | "signup" | "recover"
+  auth: null, // {username, token, role, displayName}
+  settings: { departments: ["نجارة","دهان","تنجيد","أرزة"], hourlyRate: 0 },
+  entries: [], users: [],
+  tab: "new", saving: false, error: "", authError: "", authInfo: ""
+};
+let FORM = { supervisor: "", orderNo: "", department: "", workers: "", start: "", end: "", breakMin: "", startH: "", startM: "", endH: "", endM: "" };
+let AUTH_FORM = { phone: "", password: "", displayName: "", recoveryPin: "", newPassword: "" };
+
+function pad2(n) { return String(n).padStart(2, "0"); }
+function hourOptions(selected) {
+  let opts = `<option value="" ${selected===""?'selected':''}>--</option>`;
+  for (let h=0; h<24; h++) { const v = pad2(h); opts += `<option value="${v}" ${selected===v?'selected':''}>${v}</option>`; }
+  return opts;
+}
+function minuteOptions(selected) {
+  let opts = `<option value="" ${selected===""?'selected':''}>--</option>`;
+  for (let m=0; m<60; m++) { const v = pad2(m); opts += `<option value="${v}" ${selected===v?'selected':''}>${v}</option>`; }
+  return opts;
+}
+function updateStart() { FORM.start = (FORM.startH && FORM.startM) ? (FORM.startH + ":" + FORM.startM) : ""; renderPreview(); }
+function updateEnd() { FORM.end = (FORM.endH && FORM.endM) ? (FORM.endH + ":" + FORM.endM) : ""; renderPreview(); }
+
+function timeToMinutes(t) {
+  if (!t) return null;
+  const parts = t.split(":").map(Number);
+  if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
+  return parts[0]*60 + parts[1];
+}
+function computeHours(start, end, breakMin, workers) {
+  const s = timeToMinutes(start), e = timeToMinutes(end);
+  const b = Number(breakMin)||0, w = Number(workers)||0;
+  if (s===null || e===null) return { actualHours:0, laborHours:0 };
+  let diff = e - s;
+  if (diff < 0) diff += 1440;
+  diff -= b;
+  if (diff < 0) diff = 0;
+  const actualHours = diff/60;
+  return { actualHours, laborHours: actualHours*w };
+}
+
+async function apiPost(action, payload) {
+  const url = new URL(CONFIG.SCRIPT_URL);
+  url.searchParams.set("action", action);
+  url.searchParams.set("data", JSON.stringify(payload||{}));
+  const res = await fetch(url.toString(), { method: "GET" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+function authPayload() {
+  return { username: STATE.auth.username, token: STATE.auth.token };
+}
+
+function saveAuthLocal() {
+  localStorage.setItem("warsha_auth", JSON.stringify(STATE.auth));
+}
+function loadAuthLocal() {
   try {
-    var action = (e.parameter && e.parameter.action) || null;
-    var body = {};
-    if (e.parameter && e.parameter.data) {
-      try { body = JSON.parse(e.parameter.data); } catch (parseErr) { body = {}; }
-      action = body.action || action;
-    } else if (e.postData && e.postData.contents) {
-      body = JSON.parse(e.postData.contents);
-      action = body.action || action;
-    }
-
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var usersSheet = getOrCreateSheet(ss, "Users", ["phone", "passwordHash", "role", "displayName", "createdAt", "recoveryPinHash"]);
-    var entriesSheet = getOrCreateSheet(ss, "Entries", [
-      "id", "date", "supervisor", "orderNo", "department",
-      "workers", "start", "end", "breakMin", "actualHours", "laborHours", "username"
-    ]);
-    var settingsSheet = getOrCreateSheet(ss, "Settings", ["json"]);
-
-    var result;
-    switch (action) {
-      case "signup":
-        result = signup(usersSheet, body.phone, body.password, body.displayName, body.recoveryPin);
-        break;
-      case "login":
-        result = login(usersSheet, body.phone, body.password);
-        break;
-      case "recoverPassword":
-        result = recoverPassword(usersSheet, body.phone, body.recoveryPin, body.newPassword);
-        break;
-      case "getData":
-        result = getData(usersSheet, entriesSheet, settingsSheet, body);
-        break;
-      case "addEntry":
-        result = addEntry(usersSheet, entriesSheet, body);
-        break;
-      case "deleteEntry":
-        result = deleteEntry(usersSheet, entriesSheet, body);
-        break;
-      case "saveSettings":
-        result = saveSettings(usersSheet, settingsSheet, body);
-        break;
-      case "listUsers":
-        result = listUsers(usersSheet, body);
-        break;
-      case "deleteUser":
-        result = deleteUser(usersSheet, body);
-        break;
-      case "adminResetPassword":
-        result = adminResetPassword(usersSheet, body);
-        break;
-      case "createUser":
-        result = createUser(usersSheet, body);
-        break;
-      default:
-        result = { ok: false, error: "unknown action" };
-    }
-
-    return ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
+    const raw = localStorage.getItem("warsha_auth");
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
 }
+function clearAuthLocal() { localStorage.removeItem("warsha_auth"); }
 
-/* ---------------- Users / Auth ---------------- */
-
-function sha256(text) {
-  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8);
-  return bytes.map(function (b) {
-    var v = (b < 0 ? b + 256 : b).toString(16);
-    return v.length === 1 ? "0" + v : v;
-  }).join("");
+function saveDataCache() {
+  try {
+    localStorage.setItem("warsha_cache", JSON.stringify({
+      settings: STATE.settings, entries: STATE.entries,
+      role: STATE.auth.role, displayName: STATE.auth.displayName
+    }));
+  } catch(e) {}
 }
-
-function makeToken(phone, passwordHash) {
-  return sha256(phone.toLowerCase() + "|" + passwordHash + "|" + SECRET);
-}
-
-function normalizePhone(phone) {
-  return String(phone || "").replace(/[^0-9]/g, "");
-}
-
-function findUserRow(usersSheet, phone) {
-  var norm = normalizePhone(phone);
-  var data = usersSheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (normalizePhone(data[i][0]) === norm && norm !== "") {
-      return {
-        rowIndex: i + 1, phone: data[i][0], username: data[i][0],
-        passwordHash: data[i][1], role: data[i][2], displayName: data[i][3],
-        recoveryPinHash: data[i][5]
-      };
-    }
-  }
+function loadDataCache() {
+  try {
+    const raw = localStorage.getItem("warsha_cache");
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
   return null;
 }
 
-function signup(usersSheet, phone, password, displayName, recoveryPin) {
-  var normPhone = normalizePhone(phone);
-  password = (password || "").trim();
-  displayName = (displayName || "").trim();
-  recoveryPin = (recoveryPin || "").trim();
-
-  if (!normPhone || !password || !displayName || !recoveryPin) {
-    return { ok: false, error: "من فضلك املأ كل الحقول" };
-  }
-  if (normPhone.length < 8 || normPhone.length > 15) {
-    return { ok: false, error: "رقم الهاتف غير صحيح" };
-  }
-  if (password.length < 4) {
-    return { ok: false, error: "الباسورد لازم يكون 4 حروف/أرقام على الأقل" };
-  }
-  if (recoveryPin.length < 4) {
-    return { ok: false, error: "الرقم السري الاحتياطي لازم يكون 4 أرقام على الأقل" };
-  }
-  if (findUserRow(usersSheet, normPhone)) {
-    return { ok: false, error: "الرقم ده مسجل بالفعل، سجل دخول بدل ما تعمل حساب جديد" };
-  }
-  var isFirstUser = usersSheet.getLastRow() < 2;
-  var role = isFirstUser ? "admin" : "supervisor";
-  var passwordHash = sha256(password);
-  var recoveryPinHash = sha256(recoveryPin);
-  usersSheet.appendRow([normPhone, passwordHash, role, displayName, new Date().toISOString(), recoveryPinHash]);
-  var token = makeToken(normPhone, passwordHash);
-  return { ok: true, role: role, displayName: displayName, username: normPhone, token: token };
-}
-
-function login(usersSheet, phone, password) {
-  password = (password || "").trim();
-  var user = findUserRow(usersSheet, phone);
-  if (!user) return { ok: false, error: "بيانات الدخول غير صحيحة" };
-  var passwordHash = sha256(password);
-  if (passwordHash !== user.passwordHash) return { ok: false, error: "بيانات الدخول غير صحيحة" };
-  var token = makeToken(user.phone, user.passwordHash);
-  return { ok: true, role: user.role, displayName: user.displayName, username: user.phone, token: token };
-}
-
-function recoverPassword(usersSheet, phone, recoveryPin, newPassword) {
-  recoveryPin = (recoveryPin || "").trim();
-  newPassword = (newPassword || "").trim();
-  var user = findUserRow(usersSheet, phone);
-  if (!user) return { ok: false, error: "الرقم ده مش مسجل" };
-  if (!user.recoveryPinHash) {
-    return { ok: false, error: "الحساب ده اتعمل قبل ما تتفعّل خاصية الاسترجاع، كلم الأدمن يعملك تغيير باسورد" };
-  }
-  if (sha256(recoveryPin) !== user.recoveryPinHash) {
-    return { ok: false, error: "الرقم السري الاحتياطي غلط" };
-  }
-  if (newPassword.length < 4) {
-    return { ok: false, error: "الباسورد الجديد لازم يكون 4 حروف/أرقام على الأقل" };
-  }
-  var newHash = sha256(newPassword);
-  usersSheet.getRange(user.rowIndex, 2).setValue(newHash);
-  var token = makeToken(user.phone, newHash);
-  return { ok: true, role: user.role, displayName: user.displayName, username: user.phone, token: token };
-}
-
-function authenticate(usersSheet, body) {
-  var user = findUserRow(usersSheet, body.username || "");
-  if (!user) return null;
-  var expected = makeToken(user.phone, user.passwordHash);
-  if (expected !== body.token) return null;
-  return user;
-}
-
-function listUsers(usersSheet, body) {
-  var me = authenticate(usersSheet, body);
-  if (!me || me.role !== "admin") return { ok: false, error: "غير مسموح" };
-  var data = usersSheet.getDataRange().getValues();
-  var users = [];
-  for (var i = 1; i < data.length; i++) {
-    users.push({ username: data[i][0], role: data[i][2], displayName: data[i][3] });
-  }
-  return { ok: true, users: users };
-}
-
-function deleteUser(usersSheet, body) {
-  var me = authenticate(usersSheet, body);
-  if (!me || me.role !== "admin") return { ok: false, error: "غير مسموح" };
-  var target = findUserRow(usersSheet, body.targetPhone || "");
-  if (!target) return { ok: false, error: "المستخدم مش موجود" };
-  if (target.role === "admin") return { ok: false, error: "مينفعش تحذف حساب أدمن" };
-  usersSheet.deleteRow(target.rowIndex);
-  return { ok: true };
-}
-
-function adminResetPassword(usersSheet, body) {
-  var me = authenticate(usersSheet, body);
-  if (!me || me.role !== "admin") return { ok: false, error: "غير مسموح" };
-  var target = findUserRow(usersSheet, body.targetPhone || "");
-  if (!target) return { ok: false, error: "المستخدم مش موجود" };
-  var newPassword = (body.newPassword || "").trim();
-  if (newPassword.length < 4) return { ok: false, error: "الباسورد الجديد لازم يكون 4 حروف/أرقام على الأقل" };
-  usersSheet.getRange(target.rowIndex, 2).setValue(sha256(newPassword));
-  return { ok: true };
-}
-
-function createUser(usersSheet, body) {
-  var me = authenticate(usersSheet, body);
-  if (!me || me.role !== "admin") return { ok: false, error: "غير مسموح" };
-
-  var normPhone = normalizePhone(body.newPhone);
-  var password = (body.newPassword || "").trim();
-  var displayName = (body.newDisplayName || "").trim();
-  var role = body.newRole === "viewer" ? "viewer" : "supervisor";
-
-  if (!normPhone || !password || !displayName) {
-    return { ok: false, error: "من فضلك املأ كل الحقول" };
-  }
-  if (findUserRow(usersSheet, normPhone)) {
-    return { ok: false, error: "الرقم ده مستخدم بالفعل" };
-  }
-  var passwordHash = sha256(password);
-  var recoveryPinHash = sha256(password); // نفس الباسورد مبدئيًا، يقدر يغيّرها بنفسه بعدين
-  usersSheet.appendRow([normPhone, passwordHash, role, displayName, new Date().toISOString(), recoveryPinHash]);
-  return { ok: true };
-}
-
-/* ---------------- Settings ---------------- */
-
-function getSettingsObj(settingsSheet) {
-  var val = settingsSheet.getRange(2, 1).getValue();
-  if (!val) {
-    var defaults = { departments: ["نجارة", "دهان", "تنجيد", "أرزة"], hourlyRate: 0 };
-    settingsSheet.getRange(2, 1).setValue(JSON.stringify(defaults));
-    return defaults;
-  }
-  return JSON.parse(val);
-}
-
-function saveSettings(usersSheet, settingsSheet, body) {
-  var me = authenticate(usersSheet, body);
-  if (!me || me.role !== "admin") return { ok: false, error: "غير مسموح" };
-  settingsSheet.getRange(2, 1).setValue(JSON.stringify(body.settings));
-  return { ok: true };
-}
-
-/* ---------------- Entries ---------------- */
-
-function getData(usersSheet, entriesSheet, settingsSheet, body) {
-  var me = authenticate(usersSheet, body);
-  if (!me) return { ok: false, error: "من فضلك سجل دخول تاني" };
-
-  var settings = getSettingsObj(settingsSheet);
-  var data = entriesSheet.getDataRange().getValues();
-  var rows = data.slice(1).filter(function (r) { return r[0]; });
-
-  var entries = rows.map(function (r) {
-    return {
-      id: r[0], date: r[1], supervisor: r[2], orderNo: r[3], department: r[4],
-      workers: r[5], start: r[6], end: r[7], breakMin: r[8],
-      actualHours: r[9], laborHours: r[10], username: r[11]
-    };
-  });
-
-  if (me.role === "admin" || me.role === "viewer") {
-    return { ok: true, role: me.role, displayName: me.displayName, settings: settings, entries: entries };
-  } else {
-    var mine = entries.filter(function (en) { return normalizePhone(en.username) === normalizePhone(me.phone); });
-    return {
-      ok: true, role: "supervisor", displayName: me.displayName,
-      settings: { departments: settings.departments }, entries: mine
-    };
-  }
-}
-
-function addEntry(usersSheet, entriesSheet, body) {
-  var me = authenticate(usersSheet, body);
-  if (!me) return { ok: false, error: "من فضلك سجل دخول تاني" };
-  if (me.role === "viewer") return { ok: false, error: "غير مسموح" };
-
-  var entry = body.entry || {};
-  var supervisorName = me.role === "admin" ? (entry.supervisor || me.displayName) : me.displayName;
-
-  entriesSheet.appendRow([
-    entry.id, entry.date, supervisorName, entry.orderNo, entry.department,
-    entry.workers, entry.start, entry.end, entry.breakMin,
-    entry.actualHours, entry.laborHours, me.phone
-  ]);
-  return { ok: true };
-}
-
-function deleteEntry(usersSheet, entriesSheet, body) {
-  var me = authenticate(usersSheet, body);
-  if (!me || me.role !== "admin") return { ok: false, error: "غير مسموح" };
-  var data = entriesSheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(body.id)) {
-      entriesSheet.deleteRow(i + 1);
-      break;
+async function boot() {
+  const saved = loadAuthLocal();
+  if (saved) {
+    STATE.auth = saved;
+    const cached = loadDataCache();
+    if (cached) {
+      // اعرض آخر بيانات محفوظة فورًا من غير ما تستنى النت
+      STATE.settings = cached.settings;
+      STATE.entries = cached.entries;
+      STATE.auth.role = cached.role;
+      STATE.auth.displayName = cached.displayName;
+      if (STATE.auth.role === "supervisor") FORM.supervisor = STATE.auth.displayName;
+      if (!FORM.department) FORM.department = (STATE.settings.departments || [])[0] || "";
+      STATE.loading = false;
+      STATE.booted = true;
+      render();
+      loadAll(true); // حدّث في الخلفية من غير ما توقف الشاشة
+      return;
     }
+    await loadAll(true);
+  } else {
+    STATE.loading = false;
   }
-  return { ok: true };
+  STATE.booted = true;
+  render();
 }
 
-function getOrCreateSheet(ss, name, headers) {
-  var sheet = ss.getSheetByName(name);
-  if (!sheet) {
-    sheet = ss.insertSheet(name);
-    sheet.appendRow(headers);
+async function loadAll(silent) {
+  if (!silent) { STATE.loading = true; render(); }
+  try {
+    const data = await apiPost("getData", authPayload());
+    if (!data.ok) {
+      clearAuthLocal();
+      STATE.auth = null;
+      STATE.error = "";
+      STATE.loading = false;
+      render();
+      return;
+    }
+    STATE.settings = data.settings;
+    STATE.entries = data.entries || [];
+    STATE.auth.role = data.role;
+    STATE.auth.displayName = data.displayName;
+    if (STATE.auth.role === "supervisor") FORM.supervisor = STATE.auth.displayName;
+    if (!FORM.department) FORM.department = (STATE.settings.departments || [])[0] || "";
+    STATE.error = "";
+    saveDataCache();
+  } catch (e) {
+    STATE.error = "تعذر الاتصال بالسيرفر. تأكد من اتصال الإنترنت وحاول تاني.";
   }
-  return sheet;
+  STATE.loading = false;
+  render();
 }
+
+async function handleAuthSubmit(ev) {
+  ev.preventDefault();
+  STATE.authError = ""; STATE.authInfo = "";
+  try {
+    if (STATE.authMode === "login") {
+      if (!AUTH_FORM.phone || !AUTH_FORM.password) {
+        STATE.authError = "من فضلك اكتب رقم الهاتف والباسورد"; render(); return;
+      }
+      render_loginBtnLoading(true);
+      const res = await apiPost("login", { phone: AUTH_FORM.phone, password: AUTH_FORM.password });
+      if (!res.ok) { STATE.authError = res.error || "حصل خطأ"; render(); return; }
+      STATE.auth = { username: res.username, token: res.token, role: res.role, displayName: res.displayName };
+      saveAuthLocal();
+      await loadAll(true);
+    } else if (STATE.authMode === "signup") {
+      if (!AUTH_FORM.phone || !AUTH_FORM.password || !AUTH_FORM.displayName || !AUTH_FORM.recoveryPin) {
+        STATE.authError = "من فضلك املأ كل الحقول"; render(); return;
+      }
+      render_loginBtnLoading(true);
+      const res = await apiPost("signup", {
+        phone: AUTH_FORM.phone, password: AUTH_FORM.password,
+        displayName: AUTH_FORM.displayName, recoveryPin: AUTH_FORM.recoveryPin
+      });
+      if (!res.ok) { STATE.authError = res.error || "حصل خطأ"; render(); return; }
+      STATE.auth = { username: res.username, token: res.token, role: res.role, displayName: res.displayName };
+      saveAuthLocal();
+      await loadAll(true);
+    } else if (STATE.authMode === "recover") {
+      if (!AUTH_FORM.phone || !AUTH_FORM.recoveryPin || !AUTH_FORM.newPassword) {
+        STATE.authError = "من فضلك املأ كل الحقول"; render(); return;
+      }
+      render_loginBtnLoading(true);
+      const res = await apiPost("recoverPassword", {
+        phone: AUTH_FORM.phone, recoveryPin: AUTH_FORM.recoveryPin, newPassword: AUTH_FORM.newPassword
+      });
+      if (!res.ok) { STATE.authError = res.error || "حصل خطأ"; render_loginBtnLoading(false); render(); return; }
+      switchAuthMode("login");
+      STATE.authInfo = "تم تغيير الباسورد، سجل دخول بالباسورد الجديد";
+      render();
+    }
+  } catch (e) {
+    STATE.authError = "تعذر الاتصال بالسيرفر، تأكد من الإنترنت وحاول تاني";
+    STATE.loading = false;
+    render();
+  }
+}
+
+function render_loginBtnLoading(v) {
+  const btn = document.getElementById("authSubmitBtn");
+  if (!btn) return;
+  btn.disabled = v;
+  if (v) { btn.innerText = "جاري التنفيذ..."; return; }
+  btn.innerText = STATE.authMode==="login" ? "دخول" : (STATE.authMode==="signup" ? "إنشاء حساب" : "تغيير الباسورد");
+}
+
+function logout() {
+  clearAuthLocal();
+  localStorage.removeItem("warsha_cache");
+  STATE.auth = null;
+  STATE.entries = [];
+  STATE.tab = "new";
+  render();
+}
+
+async function handleSubmit(ev) {
+  ev.preventDefault();
+  const supervisorName = STATE.auth.role === "admin" ? FORM.supervisor : STATE.auth.displayName;
+  if (!supervisorName || !FORM.orderNo || !FORM.department || !FORM.start || !FORM.end) {
+    STATE.error = "من فضلك املأ رقم الطلب والقسم ووقت البداية والنهاية"; render(); return;
+  }
+  STATE.error = ""; STATE.saving = true; render();
+  const { actualHours, laborHours } = computeHours(FORM.start, FORM.end, FORM.breakMin, FORM.workers);
+  const entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    date: new Date().toISOString().slice(0,10),
+    supervisor: supervisorName, orderNo: FORM.orderNo, department: FORM.department,
+    workers: Number(FORM.workers)||0, start: FORM.start, end: FORM.end, breakMin: Number(FORM.breakMin)||0,
+    actualHours, laborHours
+  };
+  try {
+    const res = await apiPost("addEntry", Object.assign({ entry }, authPayload()));
+    if (!res.ok) throw new Error(res.error||"error");
+    FORM.orderNo=""; FORM.workers=""; FORM.start=""; FORM.end=""; FORM.breakMin="";
+    FORM.startH=""; FORM.startM=""; FORM.endH=""; FORM.endM="";
+    await loadAll(true);
+  } catch(e) { STATE.error = "تعذر حفظ التسجيلة، حاول تاني"; }
+  STATE.saving = false; render();
+}
+
+async function handleDelete(id) {
+  try {
+    const res = await apiPost("deleteEntry", Object.assign({ id }, authPayload()));
+    if (!res.ok) throw new Error();
+    await loadAll(true);
+  } catch(e) { STATE.error = "تعذر حذف التسجيلة"; render(); }
+}
+
+async function saveSettings(next) {
+  STATE.settings = next; render();
+  try {
+    const res = await apiPost("saveSettings", Object.assign({ settings: next }, authPayload()));
+    if (!res.ok) throw new Error();
+  } catch(e) { STATE.error = "تعذر حفظ الإعدادات"; render(); }
+}
+
+async function loadUsers() {
+  try {
+    const res = await apiPost("listUsers", authPayload());
+    if (res.ok) { STATE.users = res.users; render(); }
+  } catch(e) {}
+}
+async function removeUser(username) {
+  try {
+    const res = await apiPost("deleteUser", Object.assign({ targetPhone: username }, authPayload()));
+    if (!res.ok) { STATE.error = res.error || "تعذر الحذف"; render(); return; }
+    await loadUsers();
+  } catch(e) { STATE.error = "تعذر الحذف"; render(); }
+}
+async function resetUserPassword(username) {
+  const newPassword = prompt("اكتب باسورد جديد للحساب ده (4 حروف/أرقام على الأقل):");
+  if (!newPassword) return;
+  try {
+    const res = await apiPost("adminResetPassword", Object.assign({ targetPhone: username, newPassword }, authPayload()));
+    if (!res.ok) { STATE.error = res.error || "تعذر تغيير الباسورد"; render(); return; }
+    alert("تم تغيير الباسورد. قوله للمشرف يستخدم الباسورد الجديد ده.");
+  } catch(e) { STATE.error = "تعذر تغيير الباسورد"; render(); }
+}
+async function createViewerAccount() {
+  const newDisplayName = document.getElementById("viewerName").value.trim();
+  const newPhone = document.getElementById("viewerPhone").value.trim();
+  const newPassword = document.getElementById("viewerPassword").value.trim();
+  if (!newDisplayName || !newPhone || !newPassword) {
+    STATE.error = "من فضلك املأ كل حقول حساب المراقبة"; render(); return;
+  }
+  try {
+    const res = await apiPost("createUser", Object.assign(
+      { newPhone, newPassword, newDisplayName, newRole: "viewer" }, authPayload()
+    ));
+    if (!res.ok) { STATE.error = res.error || "تعذر إنشاء الحساب"; render(); return; }
+    STATE.error = "";
+    await loadUsers();
+    alert("اتعمل حساب المراقبة. الرقم: " + newPhone + " - الباسورد: " + newPassword);
+  } catch(e) { STATE.error = "تعذر إنشاء الحساب"; render(); }
+}
+
+let _xlsxLoading = null;
+function loadXLSX() {
+  if (window.XLSX) return Promise.resolve();
+  if (_xlsxLoading) return _xlsxLoading;
+  _xlsxLoading = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("failed to load xlsx"));
+    document.head.appendChild(s);
+  });
+  return _xlsxLoading;
+}
+
+async function exportExcel() {
+  const btn = document.getElementById("exportBtn");
+  if (btn) { btn.disabled = true; btn.innerText = "جاري التجهيز..."; }
+  try {
+    await loadXLSX();
+  } catch (e) {
+    STATE.error = "تعذر تحميل مكتبة التصدير، تأكد من الإنترنت وحاول تاني";
+    render();
+    return;
+  }
+  const rows = STATE.entries.map(en => ({
+    "التاريخ": en.date, "المشرف": en.supervisor, "رقم الطلب": en.orderNo, "القسم": en.department,
+    "عدد العمال": en.workers, "من": en.start, "الى": en.end, "الاستراحة (دقيقة)": en.breakMin,
+    "الساعات الفعلية": Number(Number(en.actualHours).toFixed(2)),
+    "ساعات العمل": Number(Number(en.laborHours).toFixed(2)),
+    "تكلفة العمالة": Number((Number(en.laborHours) * (STATE.settings.hourlyRate||0)).toFixed(2))
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "السجل");
+  XLSX.writeFile(wb, "سجل_ساعات_العمل.xlsx");
+  if (btn) { btn.disabled = false; btn.innerText = "⬇ تصدير Excel"; }
+}
+
+function computeSummary() {
+  const byOrder = {};
+  STATE.entries.forEach(en => {
+    if (!byOrder[en.orderNo]) byOrder[en.orderNo] = {};
+    byOrder[en.orderNo][en.department] = (byOrder[en.orderNo][en.department]||0) + Number(en.laborHours);
+  });
+  return Object.entries(byOrder).map(([orderNo, depts]) => {
+    const total = Object.values(depts).reduce((a,b)=>a+b,0);
+    return { orderNo, depts, total, cost: total*(STATE.settings.hourlyRate||0) };
+  });
+}
+
+function esc(s) { const d=document.createElement("div"); d.innerText = s==null?"":s; return d.innerHTML; }
+
+function renderAuthScreen() {
+  const mode = STATE.authMode;
+  const titles = { login: "تسجيل الدخول", signup: "إنشاء حساب جديد", recover: "نسيت الباسورد؟" };
+  const subs = {
+    login: "ادخل بيانات حسابك",
+    signup: "أول حساب في النظام بيبقى أدمن تلقائيًا",
+    recover: "ادخل رقمك والرقم السري الاحتياطي اللي حددته وقت إنشاء الحساب"
+  };
+  const btnLabel = { login: "دخول", signup: "إنشاء حساب", recover: "تغيير الباسورد" };
+
+  return `
+    <div class="header"><div class="header-inner"><div class="header-left">
+      <span style="font-size:26px;">🔨</span>
+      <div><h1 class="title">دفتر الورشة</h1><p class="subtitle">متابعة ساعات الإنتاج لكل طلب بيع</p></div>
+    </div></div></div>
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <h2 class="auth-title">${titles[mode]}</h2>
+        <p class="auth-sub">${subs[mode]}</p>
+        ${STATE.authError ? `<div class="error-banner" style="margin:0 0 14px;">${esc(STATE.authError)}</div>` : ""}
+        ${STATE.authInfo ? `<div class="error-banner" style="margin:0 0 14px; background:#EAF3EA; color:#2E6B3E; border-color:#C9E3CB;">${esc(STATE.authInfo)}</div>` : ""}
+        <form id="authForm">
+          ${mode === "signup" ? `
+          <div class="auth-field">
+            <span class="field-label">اسمك (هيظهر في السجل)</span>
+            <input class="input" value="${esc(AUTH_FORM.displayName)}" oninput="AUTH_FORM.displayName=this.value">
+          </div>` : ""}
+
+          <div class="auth-field">
+            <span class="field-label">رقم الهاتف</span>
+            <input class="input" type="tel" inputmode="numeric" placeholder="01xxxxxxxxx" value="${esc(AUTH_FORM.phone)}" oninput="AUTH_FORM.phone=this.value">
+          </div>
+
+          ${mode === "login" ? `
+          <div class="auth-field">
+            <span class="field-label">الباسورد</span>
+            <input type="password" class="input" value="${esc(AUTH_FORM.password)}" oninput="AUTH_FORM.password=this.value">
+          </div>` : ""}
+
+          ${mode === "signup" ? `
+          <div class="auth-field">
+            <span class="field-label">الباسورد</span>
+            <input type="password" class="input" value="${esc(AUTH_FORM.password)}" oninput="AUTH_FORM.password=this.value">
+          </div>
+          <div class="auth-field">
+            <span class="field-label">رقم سري احتياطي (4 أرقام على الأقل، لو نسيت الباسورد)</span>
+            <input class="input" type="tel" inputmode="numeric" value="${esc(AUTH_FORM.recoveryPin)}" oninput="AUTH_FORM.recoveryPin=this.value">
+          </div>` : ""}
+
+          ${mode === "recover" ? `
+          <div class="auth-field">
+            <span class="field-label">الرقم السري الاحتياطي</span>
+            <input class="input" type="tel" inputmode="numeric" value="${esc(AUTH_FORM.recoveryPin)}" oninput="AUTH_FORM.recoveryPin=this.value">
+          </div>
+          <div class="auth-field">
+            <span class="field-label">الباسورد الجديد</span>
+            <input type="password" class="input" value="${esc(AUTH_FORM.newPassword)}" oninput="AUTH_FORM.newPassword=this.value">
+          </div>` : ""}
+
+          <button type="submit" id="authSubmitBtn" class="submit-btn">${btnLabel[mode]}</button>
+        </form>
+        <div class="auth-switch">
+          ${mode === "login" ? `
+            مالكش حساب؟ <a onclick="switchAuthMode('signup')">اعمل حساب جديد</a><br>
+            <a onclick="switchAuthMode('recover')">نسيت الباسورد؟</a>
+          ` : mode === "signup" ? `
+            عندك حساب بالفعل؟ <a onclick="switchAuthMode('login')">سجل دخول</a>
+          ` : `
+            <a onclick="switchAuthMode('login')">رجوع لتسجيل الدخول</a>
+          `}
+        </div>
+      </div>
+    </div>`;
+}
+
+function switchAuthMode(mode) {
+  STATE.authMode = mode; STATE.authError = ""; STATE.authInfo = "";
+  AUTH_FORM = { phone: "", password: "", displayName: "", recoveryPin: "", newPassword: "" };
+  render();
+}
+
+function render() {
+  const app = document.getElementById("app");
+
+  if (CONFIG.SCRIPT_URL.includes("PASTE_YOUR")) {
+    app.innerHTML = `<div class="setup-card"><h2>خطوة إعداد ناقصة</h2><p>حط رابط جوجل أبس سكريبت في <code>CONFIG.SCRIPT_URL</code>.</p></div>`;
+    return;
+  }
+  if (!STATE.booted) {
+    app.innerHTML = `<div class="loading-wrap">⏳ جاري التحميل...</div>`;
+    return;
+  }
+  if (!STATE.auth) {
+    app.innerHTML = renderAuthScreen();
+    const f = document.getElementById("authForm");
+    if (f) f.addEventListener("submit", handleAuthSubmit);
+    return;
+  }
+  if (STATE.loading) {
+    app.innerHTML = `<div class="loading-wrap">⏳ جاري تحميل البيانات...</div>`;
+    return;
+  }
+
+  const isAdmin = STATE.auth.role === "admin";
+  const isViewer = STATE.auth.role === "viewer";
+  const tabs = isAdmin
+    ? [ {id:"new", label:"تسجيل جديد"}, {id:"log", label:"السجل"}, {id:"summary", label:"الملخص"}, {id:"settings", label:"الإعدادات"} ]
+    : isViewer
+    ? [ {id:"log", label:"السجل"}, {id:"summary", label:"الملخص"} ]
+    : [ {id:"new", label:"تسجيل جديد"}, {id:"mylog", label:"سجلي"} ];
+  if (isViewer && STATE.tab !== "log" && STATE.tab !== "summary") STATE.tab = "log";
+
+  let html = `
+    <div class="header"><div class="header-inner">
+      <div class="header-left">
+        <span style="font-size:26px;">🔨</span>
+        <div><h1 class="title">دفتر الورشة</h1><p class="subtitle">متابعة ساعات الإنتاج لكل طلب بيع</p></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="whoami">${esc(STATE.auth.displayName)} ${isAdmin?'<span class="role-badge role-admin">أدمن</span>':''}${isViewer?'<span class="role-badge role-admin">مراقبة</span>':''}</span>
+        <button class="logout-btn" onclick="logout()">خروج</button>
+      </div>
+    </div></div>
+    <nav class="tabs">
+      ${tabs.map(t=>`<button class="tab-btn ${STATE.tab===t.id?'active':''}" onclick="setTab('${t.id}')">${t.label}</button>`).join("")}
+    </nav>
+    ${STATE.error ? `<div class="error-banner">${esc(STATE.error)}</div>` : ""}
+    <main>`;
+
+  if (STATE.tab === "new" && !isViewer) {
+    const preview = computeHours(FORM.start, FORM.end, FORM.breakMin, FORM.workers);
+    html += `
+      <form class="card" id="entryForm">
+        <div class="grid2">
+          <label class="field"><span class="field-label">المشرف</span>
+            ${isAdmin
+              ? `<input class="input" value="${esc(FORM.supervisor)}" oninput="FORM.supervisor=this.value" placeholder="اكتب اسم المشرف">`
+              : `<div class="locked-name">${esc(STATE.auth.displayName)}</div>`}
+          </label>
+          <label class="field"><span class="field-label">رقم الطلب</span>
+            <input class="input" value="${esc(FORM.orderNo)}" oninput="FORM.orderNo=this.value" placeholder="مثال: 1024">
+          </label>
+          <label class="field"><span class="field-label">القسم</span>
+            <select onchange="FORM.department=this.value">
+              ${(STATE.settings.departments||[]).map(d=>`<option value="${esc(d)}" ${FORM.department===d?'selected':''}>${esc(d)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="field"><span class="field-label">عدد العمال</span>
+            <input type="number" min="0" class="input" value="${esc(FORM.workers)}" oninput="FORM.workers=this.value; renderPreview();" placeholder="0">
+          </label>
+          <label class="field"><span class="field-label">وقت البداية</span>
+            <div class="time-pair">
+              <select onchange="FORM.startH=this.value; updateStart();">${hourOptions(FORM.startH)}</select>
+              <span class="time-colon">:</span>
+              <select onchange="FORM.startM=this.value; updateStart();">${minuteOptions(FORM.startM)}</select>
+            </div>
+          </label>
+          <label class="field"><span class="field-label">وقت النهاية</span>
+            <div class="time-pair">
+              <select onchange="FORM.endH=this.value; updateEnd();">${hourOptions(FORM.endH)}</select>
+              <span class="time-colon">:</span>
+              <select onchange="FORM.endM=this.value; updateEnd();">${minuteOptions(FORM.endM)}</select>
+            </div>
+          </label>
+          <label class="field"><span class="field-label">الاستراحة (دقيقة)</span>
+            <input type="number" min="0" class="input" value="${esc(FORM.breakMin)}" oninput="FORM.breakMin=this.value; renderPreview();" placeholder="0">
+          </label>
+        </div>
+        <div class="preview-box" id="previewBox">
+          <div class="preview-item"><span class="preview-label">الساعات الفعلية</span><span class="preview-value">${preview.actualHours.toFixed(2)}</span></div>
+          <div class="preview-divider"></div>
+          <div class="preview-item"><span class="preview-label">ساعات العمل</span><span class="preview-value">${preview.laborHours.toFixed(2)}</span></div>
+        </div>
+        <button type="submit" class="submit-btn" ${STATE.saving?'disabled':''}>${STATE.saving?'جاري التسجيل...':'تسجيل'}</button>
+      </form>`;
+  }
+
+  if (STATE.tab === "log" && (isAdmin || isViewer)) {
+    const headCols = ["التاريخ","المشرف","رقم الطلب","القسم","العمال","من","الى","استراحة","ساعات فعلية","ساعات عمل"];
+    if (isAdmin) headCols.push("");
+    html += `
+      <div class="card">
+        <div class="log-header">
+          <h2 class="card-title">السجل (${STATE.entries.length})</h2>
+          <button class="export-btn" id="exportBtn" onclick="exportExcel()">⬇ تصدير Excel</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr>${headCols.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${STATE.entries.slice().reverse().map(en=>`
+              <tr>
+                <td>${esc(en.date)}</td><td>${esc(en.supervisor)}</td><td>${esc(en.orderNo)}</td><td>${esc(en.department)}</td>
+                <td>${esc(en.workers)}</td><td>${esc(en.start)}</td><td>${esc(en.end)}</td><td>${esc(en.breakMin)}</td>
+                <td>${Number(en.actualHours).toFixed(2)}</td><td>${Number(en.laborHours).toFixed(2)}</td>
+                ${isAdmin ? `<td><button class="delete-btn" onclick="handleDelete('${en.id}')">✕</button></td>` : ""}
+              </tr>`).join("")}
+            ${STATE.entries.length===0 ? `<tr><td colspan="${headCols.length}" class="empty-row">لسه مفيش تسجيلات</td></tr>` : ""}
+          </tbody>
+        </table></div>
+      </div>`;
+  }
+
+  if (STATE.tab === "mylog" && !isAdmin && !isViewer) {
+    html += `
+      <div class="card">
+        <h2 class="card-title">سجلي (${STATE.entries.length})</h2>
+        <div class="table-wrap"><table>
+          <thead><tr>${["التاريخ","رقم الطلب","القسم","العمال","من","الى","استراحة","ساعات فعلية","ساعات عمل"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${STATE.entries.slice().reverse().map(en=>`
+              <tr>
+                <td>${esc(en.date)}</td><td>${esc(en.orderNo)}</td><td>${esc(en.department)}</td>
+                <td>${esc(en.workers)}</td><td>${esc(en.start)}</td><td>${esc(en.end)}</td><td>${esc(en.breakMin)}</td>
+                <td>${Number(en.actualHours).toFixed(2)}</td><td>${Number(en.laborHours).toFixed(2)}</td>
+              </tr>`).join("")}
+            ${STATE.entries.length===0 ? `<tr><td colspan="9" class="empty-row">لسه مفيش تسجيلات ليك</td></tr>` : ""}
+          </tbody>
+        </table></div>
+      </div>`;
+  }
+
+  if (STATE.tab === "summary" && (isAdmin || isViewer)) {
+    const summary = computeSummary();
+    html += `
+      <div class="card">
+        <h2 class="card-title">ملخص حسب رقم الطلب</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>رقم الطلب</th>${(STATE.settings.departments||[]).map(d=>`<th>${esc(d)}</th>`).join("")}<th>إجمالي ساعات العمل</th><th>تكلفة العمالة</th></tr></thead>
+          <tbody>
+            ${summary.map(row=>`
+              <tr>
+                <td>${esc(row.orderNo)}</td>
+                ${(STATE.settings.departments||[]).map(d=>`<td>${(row.depts[d]||0).toFixed(2)}</td>`).join("")}
+                <td style="font-weight:700">${row.total.toFixed(2)}</td>
+                <td style="font-weight:700; color:var(--walnut)">${row.cost.toFixed(2)}</td>
+              </tr>`).join("")}
+            ${summary.length===0 ? `<tr><td colspan="${(STATE.settings.departments||[]).length+3}" class="empty-row">لسه مفيش بيانات</td></tr>` : ""}
+          </tbody>
+        </table></div>
+      </div>`;
+  }
+
+  if (STATE.tab === "settings" && isAdmin) {
+    html += `
+      <div class="settings-grid">
+        <div class="card">
+          <h2 class="card-title">الأقسام</h2>
+          <ul class="list">
+            ${(STATE.settings.departments||[]).map(d=>`
+              <li class="list-item"><span>${esc(d)}</span><button class="small-delete" onclick="removeDept('${esc(d)}')">✕</button></li>`).join("")}
+          </ul>
+          <div class="add-row">
+            <input class="input" id="newDept" placeholder="اسم قسم جديد">
+            <button class="add-btn" onclick="addDept()">+</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">سعر الساعة</h2>
+          <div class="add-row">
+            <input type="number" min="0" class="input" id="rateInput" value="${STATE.settings.hourlyRate}">
+            <button class="add-btn" onclick="saveRate()">حفظ</button>
+          </div>
+          <p class="note">جنيه لكل ساعة عمل، بيتضرب في إجمالي ساعات العمل في الملخص.</p>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">حسابات المشرفين والمراقبة</h2>
+          <ul class="list">
+            ${STATE.users.map(u=>`
+              <li class="list-item">
+                <span>${esc(u.displayName)} (${esc(u.username)}) ${u.role==='admin'?'<span class="role-badge role-admin">أدمن</span>':''}${u.role==='viewer'?'<span class="role-badge role-admin">مراقبة</span>':''}</span>
+                <span style="display:flex; gap:8px;">
+                  ${u.role!=='admin' ? `<button class="small-delete" onclick="resetUserPassword('${esc(u.username)}')" title="إعادة تعيين الباسورد" style="color:var(--walnut);">↻</button>` : ''}
+                  ${u.role!=='admin' ? `<button class="small-delete" onclick="removeUser('${esc(u.username)}')">✕</button>` : ''}
+                </span>
+              </li>`).join("")}
+            ${STATE.users.length===0 ? `<li class="list-item">جاري التحميل...</li>` : ""}
+          </ul>
+          <p class="note">كل مشرف بيعمل حسابه بنفسه من شاشة "إنشاء حساب جديد". أيقونة ↻ تعمل باسورد جديد للحساب (لو حد نسي باسوردته والـ PIN مع بعض)، وأيقونة ✕ تحذف الحساب.</p>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">إنشاء حساب مراقبة</h2>
+          <p class="note" style="margin-top:0;">حساب "مراقبة" يقدر يشوف السجل والملخص بس (بدون تعديل أو حذف أو دخول إعدادات) — كويس تديه لحد عايز يتابع الشغل من برة.</p>
+          <div class="grid2" style="margin-bottom:10px;">
+            <label class="field"><span class="field-label">الاسم</span>
+              <input class="input" id="viewerName" placeholder="مثال: مدير الفرع">
+            </label>
+            <label class="field"><span class="field-label">رقم الهاتف</span>
+              <input class="input" id="viewerPhone" type="tel" placeholder="01xxxxxxxxx">
+            </label>
+            <label class="field"><span class="field-label">الباسورد</span>
+              <input class="input" id="viewerPassword" type="text" placeholder="اكتب باسورد له">
+            </label>
+          </div>
+          <button class="add-btn" style="width:100%;" onclick="createViewerAccount()">إنشاء حساب المراقبة</button>
+        </div>
+      </div>`;
+  }
+
+  html += `</main><footer class="footer">البيانات هنا محفوظة في جوجل شيت ومشتركة بين كل المستخدمين حسب صلاحياتهم</footer>`;
+  app.innerHTML = html;
+
+  const form = document.getElementById("entryForm");
+  if (form) form.addEventListener("submit", handleSubmit);
+
+  if (STATE.tab === "settings" && isAdmin && STATE.users.length===0) loadUsers();
+}
+
+function renderPreview() {
+  const preview = computeHours(FORM.start, FORM.end, FORM.breakMin, FORM.workers);
+  const box = document.getElementById("previewBox");
+  if (box) {
+    box.innerHTML = `
+      <div class="preview-item"><span class="preview-label">الساعات الفعلية</span><span class="preview-value">${preview.actualHours.toFixed(2)}</span></div>
+      <div class="preview-divider"></div>
+      <div class="preview-item"><span class="preview-label">ساعات العمل</span><span class="preview-value">${preview.laborHours.toFixed(2)}</span></div>`;
+  }
+}
+
+function setTab(id) { STATE.tab = id; STATE.error = ""; render(); }
+
+function addDept() {
+  const input = document.getElementById("newDept");
+  const val = input.value.trim();
+  if (val) saveSettings(Object.assign({}, STATE.settings, { departments: [...(STATE.settings.departments||[]), val] }));
+}
+function removeDept(name) {
+  saveSettings(Object.assign({}, STATE.settings, { departments: (STATE.settings.departments||[]).filter(d=>d!==name) }));
+}
+function saveRate() {
+  const val = Number(document.getElementById("rateInput").value) || 0;
+  saveSettings(Object.assign({}, STATE.settings, { hourlyRate: val }));
+}
+
+render();
+boot();
+setInterval(() => { if (STATE.auth && (STATE.tab==="log" || STATE.tab==="summary" || STATE.tab==="mylog")) loadAll(true); }, 20000);
+</script>
+</body>
+</html>
