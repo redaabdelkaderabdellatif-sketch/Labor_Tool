@@ -364,6 +364,23 @@ async function resetUserPassword(username) {
     alert("تم تغيير الباسورد. قوله للمشرف يستخدم الباسورد الجديد ده.");
   } catch(e) { STATE.error = "تعذر تغيير الباسورد"; render(); }
 }
+async function createSupervisorAccount() {
+  const newDisplayName = document.getElementById("supName").value.trim();
+  const newPhone = document.getElementById("supPhone").value.trim();
+  const newPassword = document.getElementById("supPassword").value.trim();
+  if (!newDisplayName || !newPhone || !newPassword) {
+    STATE.error = "من فضلك املأ كل حقول حساب المشرف"; render(); return;
+  }
+  try {
+    const res = await apiPost("createUser", Object.assign(
+      { newPhone, newPassword, newDisplayName, newRole: "supervisor" }, authPayload()
+    ));
+    if (!res.ok) { STATE.error = res.error || "تعذر إنشاء الحساب"; render(); return; }
+    STATE.error = "";
+    await loadUsers();
+    alert("اتعمل حساب المشرف. الرقم: " + newPhone + " - الباسورد: " + newPassword);
+  } catch(e) { STATE.error = "تعذر إنشاء الحساب"; render(); }
+}
 async function createViewerAccount() {
   const newDisplayName = document.getElementById("viewerName").value.trim();
   const newPhone = document.getElementById("viewerPhone").value.trim();
@@ -497,10 +514,7 @@ function renderAuthScreen() {
         </form>
         <div class="auth-switch">
           ${mode === "login" ? `
-            مالكش حساب؟ <a onclick="switchAuthMode('signup')">اعمل حساب جديد</a><br>
             <a onclick="switchAuthMode('recover')">نسيت الباسورد؟</a>
-          ` : mode === "signup" ? `
-            عندك حساب بالفعل؟ <a onclick="switchAuthMode('login')">سجل دخول</a>
           ` : `
             <a onclick="switchAuthMode('login')">رجوع لتسجيل الدخول</a>
           `}
@@ -713,7 +727,24 @@ function render() {
               </li>`).join("")}
             ${STATE.users.length===0 ? `<li class="list-item">جاري التحميل...</li>` : ""}
           </ul>
-          <p class="note">كل مشرف بيعمل حسابه بنفسه من شاشة "إنشاء حساب جديد". أيقونة ↻ تعمل باسورد جديد للحساب (لو حد نسي باسوردته والـ PIN مع بعض)، وأيقونة ✕ تحذف الحساب.</p>
+          <p class="note">دلوقتي إنت اللي بتعمل الحسابات من هنا مباشرة. أيقونة ↻ تعمل باسورد جديد للحساب (لو حد نسي باسوردته والـ PIN مع بعض)، وأيقونة ✕ تحذف الحساب.</p>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">إنشاء حساب مشرف جديد</h2>
+          <p class="note" style="margin-top:0;">حساب "مشرف" بيقدر يسجل تسجيلات ويشوف سجله هو بس.</p>
+          <div class="grid2" style="margin-bottom:10px;">
+            <label class="field"><span class="field-label">الاسم</span>
+              <input class="input" id="supName" placeholder="مثال: أحمد محمد">
+            </label>
+            <label class="field"><span class="field-label">رقم الهاتف</span>
+              <input class="input" id="supPhone" type="tel" placeholder="01xxxxxxxxx">
+            </label>
+            <label class="field"><span class="field-label">الباسورد</span>
+              <input class="input" id="supPassword" type="text" placeholder="اكتب باسورد له">
+            </label>
+          </div>
+          <button class="add-btn" style="width:100%;" onclick="createSupervisorAccount()">إنشاء حساب المشرف</button>
         </div>
 
         <div class="card">
@@ -770,6 +801,9 @@ function saveRate() {
   saveSettings(Object.assign({}, STATE.settings, { hourlyRate: val }));
 }
 
+if (new URLSearchParams(location.search).get("setup") === "1") {
+  STATE.authMode = "signup";
+}
 render();
 boot();
 setInterval(() => { if (STATE.auth && (STATE.tab==="log" || STATE.tab==="summary" || STATE.tab==="mylog")) loadAll(true); }, 20000);
