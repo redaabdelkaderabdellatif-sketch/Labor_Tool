@@ -366,7 +366,7 @@ function esc(s) { const d=document.createElement("div"); d.innerText = s==null?"
 function renderAuthScreen() {
   return `
     <div class="header"><div class="header-inner"><div class="header-left">
-      <div><h1 class="title">Labor Cost</h1><p class="subtitle">متابعة ساعات الإنتاج لكل طلب بيع</p></div>
+      <div><h1 class="title">Labor Cost</h1></div>
     </div></div></div>
     <div class="auth-wrap">
       <div class="auth-card">
@@ -414,7 +414,7 @@ function render() {
   let html = `
     <div class="header"><div class="header-inner">
       <div class="header-left">
-        <div><h1 class="title">Labor Cost</h1><p class="subtitle">متابعة ساعات الإنتاج لكل طلب بيع</p></div>
+        <div><h1 class="title">Labor Cost</h1></div>
       </div>
       <div style="display:flex; align-items:center; gap:10px;">
         <span class="whoami">${isSupervisor ? esc(STATE.name)+' - ' : ''}<span class="role-badge">${roleLabel}</span></span>
@@ -448,7 +448,7 @@ function render() {
               : `<div class="locked-box">${esc(STATE.department)}</div>`}
           </label>
           <label class="field"><span class="field-label">رقم الطلب</span>
-            <input class="input" value="${esc(FORM.orderNo)}" oninput="FORM.orderNo=this.value" placeholder="مثال: 1024">
+            <input class="input" value="${esc(FORM.orderNo)}" oninput="FORM.orderNo=this.value">
           </label>
           <label class="field"><span class="field-label">عدد العمال</span>
             <input type="number" min="0" class="input" value="${esc(FORM.workers)}" oninput="FORM.workers=this.value; renderPreview();" placeholder="0">
@@ -553,7 +553,6 @@ function render() {
             <input type="number" min="0" class="input" id="rateInput" value="${STATE.settings.hourlyRate}">
             <button class="add-btn" onclick="saveRate()">حفظ</button>
           </div>
-          <p class="note">جنيه لكل ساعة عمل، بيتضرب في إجمالي ساعات العمل في الملخص.</p>
         </div>
 
         <div class="card">
@@ -572,12 +571,11 @@ function render() {
               <button class="add-btn" onclick="saveReviewerPassword()">حفظ</button>
             </div>
           </div>
-          <p class="note">حساب "المشرف العام" بيدخل بالباسورد ده، ويقدر بس يشوف كل التسجيلات ويعلّم عليها "تم التحقق" — من غير تعديل أو حذف أو دخول باقي الإعدادات.</p>
         </div>
       </div>`;
   }
 
-  html += `</main><footer class="footer">البيانات هنا محفوظة في جوجل شيت ومشتركة بين كل المستخدمين حسب صلاحياتهم</footer>`;
+  html += `</main><footer class="footer">Reda Alshrkawy</footer>`;
   app.innerHTML = html;
 
   const form = document.getElementById("entryForm");
