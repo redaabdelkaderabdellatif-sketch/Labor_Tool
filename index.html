@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" id="htmlRoot">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,13 +23,15 @@
   .header-inner { display:flex; align-items:center; justify-content:space-between; gap:12px; max-width:1100px; margin:0 auto; flex-wrap:wrap; }
   .header-left { display:flex; align-items:center; gap:12px; }
   .title { font-family:'Cairo',sans-serif; font-weight:800; font-size:22px; color: var(--bg); margin:0; }
-  .subtitle { margin:2px 0 0; font-size:13px; color:#D9C7D4; }
+  .lang-switch { display:flex; gap:4px; }
+  .lang-btn { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:#F8F9FA; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-family:'Tajawal',sans-serif; }
+  .lang-btn.active { background:#fff; color:var(--walnut); font-weight:700; }
   .logout-btn { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); color:#F8F9FA; padding:8px 14px; border-radius:8px; cursor:pointer; font-family:'Tajawal',sans-serif; font-size:13px; }
   .whoami { color:#EDE4EA; font-size:13px; }
   .role-badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; background:#EDE4EA; color:var(--walnut-dark); }
 
   .tabs { display:flex; gap:4px; padding:10px 16px 0; max-width:1100px; margin:0 auto; border-bottom:1px solid var(--border); flex-wrap:wrap; }
-  .tab-btn { display:flex; align-items:center; gap:6px; padding:10px 16px; background:transparent; border:none; border-bottom:3px solid transparent; color: var(--muted); font-family:'Tajawal',sans-serif; font-size:14px; font-weight:500; cursor:pointer; }
+  .tab-btn { display:flex; align-items:center; gap:6px; padding:10px 16px; background:transparent; border:none; border-bottom:3px solid transparent; color: var(--muted); font-family:inherit; font-size:14px; font-weight:500; cursor:pointer; }
   .tab-btn.active { color: var(--walnut); border-bottom:3px solid var(--amber); font-weight:700; }
 
   .error-banner { max-width:1100px; margin:16px auto 0; background: var(--danger-bg); color: var(--danger); border:1px solid var(--danger-border); border-radius:8px; padding:10px 14px; font-size:14px; }
@@ -41,7 +43,7 @@
   .grid2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:14px; }
   .field { display:flex; flex-direction:column; gap:6px; }
   .field-label { font-size:13px; color: var(--muted); font-weight:500; }
-  .input, select { font-family:'Tajawal',sans-serif; font-size:14px; padding:10px 12px; border-radius:8px; border:1px solid #CED4DA; background:#fff; color: var(--ink); outline:none; width:100%; }
+  .input, select { font-family:inherit; font-size:14px; padding:10px 12px; border-radius:8px; border:1px solid #CED4DA; background:#fff; color: var(--ink); outline:none; width:100%; }
   .locked-box { padding:10px 12px; border-radius:8px; background:#EDE4EA; color: var(--walnut-dark); font-weight:700; }
   .time-pair { display:flex; align-items:center; gap:6px; }
   .time-pair select { width:auto; flex:1; text-align:center; }
@@ -57,17 +59,15 @@
   .submit-btn:disabled { opacity:0.6; cursor:default; }
 
   .log-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
-  .export-btn { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; border:1px solid var(--amber); background:#fff; color: var(--walnut); font-family:'Tajawal',sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
+  .export-btn { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; border:1px solid var(--amber); background:#fff; color: var(--walnut); font-family:inherit; font-weight:700; font-size:13px; cursor:pointer; }
 
   table { width:100%; border-collapse:collapse; font-size:13px; min-width:680px; }
-  th { text-align:right; background:#EDE4EA; color: var(--walnut-dark); padding:10px; font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; }
+  th { text-align:start; background:#EDE4EA; color: var(--walnut-dark); padding:10px; font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; }
   td { padding:9px 10px; border-bottom:1px solid var(--border-soft); white-space:nowrap; }
   .table-wrap { overflow-x:auto; }
   .delete-btn { border:none; background:transparent; color: var(--danger); cursor:pointer; padding:4px; font-size:14px; }
   .empty-row { text-align:center; padding:24px 0; color: var(--muted); }
   .verify-check { width:18px; height:18px; cursor:pointer; }
-  .verified-yes { color: var(--ok); font-weight:700; }
-  .verified-no { color: var(--muted); }
 
   .settings-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:16px; }
   ul.list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
@@ -76,8 +76,7 @@
   .small-delete { border:none; background:transparent; color: var(--danger); cursor:pointer; }
   .small-edit { border:none; background:transparent; color: var(--walnut); cursor:pointer; }
   .add-row { display:flex; gap:8px; }
-  .add-btn { display:flex; align-items:center; justify-content:center; padding:0 14px; border-radius:8px; border:none; background: var(--walnut); color: var(--bg); cursor:pointer; font-family:'Tajawal',sans-serif; font-weight:700; font-size:13px; }
-  .note { margin-top:10px; font-size:12px; color: var(--muted); }
+  .add-btn { display:flex; align-items:center; justify-content:center; padding:0 14px; border-radius:8px; border:none; background: var(--walnut); color: var(--bg); cursor:pointer; font-family:inherit; font-weight:700; font-size:13px; }
   .footer { text-align:center; font-size:12px; color: var(--muted); padding:0 16px 24px; }
 
   .setup-card { max-width:640px; margin:48px auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:28px; }
@@ -87,7 +86,6 @@
   .auth-wrap { max-width:380px; margin:70px auto; padding:0 16px; }
   .auth-card { background: var(--panel); border:1px solid var(--border); border-radius:14px; padding:28px; box-shadow:0 2px 8px rgba(74,46,25,0.08); text-align:center; }
   .auth-title { font-family:'Cairo',sans-serif; font-size:20px; font-weight:800; color: var(--walnut-dark); margin:0 0 4px; }
-  .auth-sub { color: var(--muted); font-size:13px; margin:0 0 20px; }
 </style>
 </head>
 <body>
@@ -101,25 +99,106 @@ const CONFIG = {
 };
 /* =========================================== */
 
+const I18N = {
+  ar: {
+    dir: "rtl",
+    loginTitle: "تسجيل الدخول", passwordPlaceholder: "الباسورد", loginBtn: "دخول", loggingIn: "جاري الدخول...",
+    wrongPassword: "الباسورد غلط", enterPassword: "اكتب الباسورد", connectionError: "تعذر الاتصال بالسيرفر، تأكد من الإنترنت وحاول تاني",
+    logoutBtn: "خروج", roleAdmin: "أدمن", roleReviewer: "مشرف عام", roleSupervisor: "مشرف",
+    tabNew: "تسجيل جديد", tabLog: "السجل", tabSummary: "الملخص", tabSettings: "الإعدادات", tabReview: "مراجعة التسجيلات",
+    fieldSupervisor: "المشرف", fieldDepartment: "القسم", fieldOrderNo: "رقم الطلب", fieldWorkers: "عدد العمال",
+    fieldStart: "وقت البداية", fieldEnd: "وقت النهاية", fieldBreak: "الاستراحة (دقيقة)",
+    previewActual: "الساعات الفعلية", previewLabor: "ساعات العمل",
+    submitBtn: "تسجيل", submitting: "جاري التسجيل...", fillAllFields: "من فضلك املأ كل الحقول",
+    adminOption: "أدمن (بدون قسم ثابت)", entrySaveFailed: "تعذر حفظ التسجيلة، حاول تاني",
+    deleteFailed: "تعذر حذف التسجيلة", verifyFailed: "تعذر تحديث حالة التحقق", settingsSaveFailed: "تعذر حفظ الإعدادات",
+    exportFailed: "تعذر تجهيز ملف الإكسيل", exportBtn: "⬇ تصدير Excel", exporting: "جاري التجهيز...",
+    colVerified: "تم التحقق", colDate: "التاريخ", colSupervisor: "المشرف", colDepartment: "القسم", colOrderNo: "رقم الطلب",
+    colWorkers: "العمال", colFrom: "من", colTo: "الى", colBreak: "استراحة", colActualHours: "ساعات فعلية", colLaborHours: "ساعات عمل",
+    noEntries: "لسه مفيش تسجيلات", noEntriesMine: "لسه مفيش تسجيلات ليك",
+    summaryTitle: "ملخص حسب رقم الطلب", colTotalHours: "إجمالي ساعات العمل",
+    colDirectCost: "تكلفة الأجور المباشرة", colIndirectCost: "تكلفة غير مباشرة", colTotalCost: "الإجمالي", noData: "لسه مفيش بيانات",
+    settingsSupervisors: "المشرفين", settingsDepartments: "الأقسام",
+    settingsDirectRate: "سعر ساعة الأجور المباشرة", settingsIndirectRate: "سعر ساعة التكاليف الإضافية غير المباشرة",
+    settingsReviewerPw: "باسورد المشرف العام", save: "حفظ",
+    addSupervisorBtn: "إضافة مشرف", addDeptPlaceholder: "اسم قسم جديد",
+    supNamePlaceholder: "اسم المشرف", supPasswordPlaceholder: "باسورد خاص بيه",
+    noSupervisorsYet: "مفيش مشرفين لسه", fillSupervisorFields: "من فضلك املأ اسم المشرف وقسمه وباسورده",
+    duplicateSupervisor: "فيه مشرف بنفس الاسم بالفعل", changeDept: "تغيير القسم", changePassword: "تغيير الباسورد", delete: "حذف",
+    setupMissing: "خطوة إعداد ناقصة", setupMissingText: "حط رابط جوجل أبس سكريبت في", loading: "⏳ جاري التحميل...", loadingData: "⏳ جاري تحميل البيانات...",
+    newPasswordPrompt: "باسورد جديد لـ", newDeptPrompt: "اكتب اسم القسم الجديد لـ", from: "من"
+  },
+  en: {
+    dir: "ltr",
+    loginTitle: "Login", passwordPlaceholder: "Password", loginBtn: "Login", loggingIn: "Logging in...",
+    wrongPassword: "Wrong password", enterPassword: "Enter the password", connectionError: "Couldn't connect to the server, check your internet and try again",
+    logoutBtn: "Logout", roleAdmin: "Admin", roleReviewer: "Reviewer", roleSupervisor: "Supervisor",
+    tabNew: "New Entry", tabLog: "Log", tabSummary: "Summary", tabSettings: "Settings", tabReview: "Review Entries",
+    fieldSupervisor: "Supervisor", fieldDepartment: "Department", fieldOrderNo: "Order No.", fieldWorkers: "Number of Workers",
+    fieldStart: "Start Time", fieldEnd: "End Time", fieldBreak: "Break (minutes)",
+    previewActual: "Actual Hours", previewLabor: "Labor Hours",
+    submitBtn: "Submit", submitting: "Submitting...", fillAllFields: "Please fill in all fields",
+    adminOption: "Admin (no fixed department)", entrySaveFailed: "Couldn't save the entry, try again",
+    deleteFailed: "Couldn't delete the entry", verifyFailed: "Couldn't update verification status", settingsSaveFailed: "Couldn't save settings",
+    exportFailed: "Couldn't prepare the Excel file", exportBtn: "⬇ Export Excel", exporting: "Preparing...",
+    colVerified: "Verified", colDate: "Date", colSupervisor: "Supervisor", colDepartment: "Department", colOrderNo: "Order No.",
+    colWorkers: "Workers", colFrom: "From", colTo: "To", colBreak: "Break", colActualHours: "Actual Hrs", colLaborHours: "Labor Hrs",
+    noEntries: "No entries yet", noEntriesMine: "No entries yet",
+    summaryTitle: "Summary by Order No.", colTotalHours: "Total Labor Hours",
+    colDirectCost: "Direct Labor Cost", colIndirectCost: "Indirect Cost", colTotalCost: "Total", noData: "No data yet",
+    settingsSupervisors: "Supervisors", settingsDepartments: "Departments",
+    settingsDirectRate: "Direct Labor Hourly Rate", settingsIndirectRate: "Indirect Overhead Hourly Rate",
+    settingsReviewerPw: "Reviewer Password", save: "Save",
+    addSupervisorBtn: "Add Supervisor", addDeptPlaceholder: "New department name",
+    supNamePlaceholder: "Supervisor name", supPasswordPlaceholder: "Their password",
+    noSupervisorsYet: "No supervisors yet", fillSupervisorFields: "Please fill in the supervisor's name, department and password",
+    duplicateSupervisor: "A supervisor with this name already exists", changeDept: "Change department", changePassword: "Change password", delete: "Delete",
+    setupMissing: "Missing setup step", setupMissingText: "Put the Google Apps Script URL in", loading: "⏳ Loading...", loadingData: "⏳ Loading data...",
+    newPasswordPrompt: "New password for", newDeptPrompt: "Type the new department for", from: "From"
+  }
+};
+
+function t(key) {
+  return (I18N[STATE.lang] && I18N[STATE.lang][key]) || I18N.ar[key] || key;
+}
+function setLang(lang) {
+  STATE.lang = lang;
+  localStorage.setItem("warsha_lang", lang);
+  applyLangToDom();
+  render();
+}
+function applyLangToDom() {
+  const dir = I18N[STATE.lang].dir;
+  document.getElementById("htmlRoot").setAttribute("lang", STATE.lang);
+  document.getElementById("htmlRoot").setAttribute("dir", dir);
+}
+
 let STATE = {
   booted: false, loading: true,
   password: "", role: null, name: "", department: "",
   settings: { departments: [], hourlyRate: 0, supervisors: [] },
   entries: [],
-  tab: "new", saving: false, error: "", authError: ""
+  tab: "new", saving: false, error: "", authError: "",
+  lang: (["ar","en"].includes(localStorage.getItem("warsha_lang")) ? localStorage.getItem("warsha_lang") : "ar")
 };
 let FORM = { supervisor: "", department: "", orderNo: "", workers: "", start: "", end: "", breakMin: "", startH: "", startM: "", endH: "", endM: "" };
 let PW_INPUT = "";
 
 function pad2(n) { return String(n).padStart(2, "0"); }
+function hourLabel12(h) {
+  const period = h < 12 ? "AM" : "PM";
+  let h12 = h % 12;
+  if (h12 === 0) h12 = 12;
+  return h12 + " " + period;
+}
 function hourOptions(selected) {
   let opts = `<option value="" ${selected===""?'selected':''}>--</option>`;
-  for (let h=0; h<24; h++) { const v = pad2(h); opts += `<option value="${v}" ${selected===v?'selected':''}>${v}</option>`; }
+  for (let h=0; h<24; h++) { const v = pad2(h); opts += `<option value="${v}" ${selected===v?'selected':''}>${hourLabel12(h)}</option>`; }
   return opts;
 }
 function minuteOptions(selected) {
   let opts = `<option value="" ${selected===""?'selected':''}>--</option>`;
-  for (let m=0; m<60; m++) { const v = pad2(m); opts += `<option value="${v}" ${selected===v?'selected':''}>${v}</option>`; }
+  for (let m=0; m<60; m+=5) { const v = pad2(m); opts += `<option value="${v}" ${selected===v?'selected':''}>${v}</option>`; }
   return opts;
 }
 function updateStart() { FORM.start = (FORM.startH && FORM.startM) ? (FORM.startH + ":" + FORM.startM) : ""; renderPreview(); }
@@ -182,6 +261,7 @@ function applyLoginData(data) {
 }
 
 async function boot() {
+  applyLangToDom();
   const saved = loadLocal();
   if (saved) {
     STATE.password = saved;
@@ -217,7 +297,7 @@ async function loadAll(silent) {
     STATE.error = "";
     saveCache();
   } catch (e) {
-    STATE.error = "تعذر الاتصال بالسيرفر. تأكد من اتصال الإنترنت وحاول تاني.";
+    STATE.error = t("connectionError");
   }
   STATE.loading = false;
   render();
@@ -226,14 +306,14 @@ async function loadAll(silent) {
 async function handlePasswordSubmit(ev) {
   ev.preventDefault();
   STATE.authError = "";
-  if (!PW_INPUT) { STATE.authError = "اكتب الباسورد"; render(); return; }
+  if (!PW_INPUT) { STATE.authError = t("enterPassword"); render(); return; }
   const btn = document.getElementById("pwSubmitBtn");
-  if (btn) { btn.disabled = true; btn.innerText = "جاري الدخول..."; }
+  if (btn) { btn.disabled = true; btn.innerText = t("loggingIn"); }
   try {
     const data = await apiCall("getData", { password: PW_INPUT });
     if (!data.ok) {
-      STATE.authError = "الباسورد غلط";
-      if (btn) { btn.disabled = false; btn.innerText = "دخول"; }
+      STATE.authError = t("wrongPassword");
+      if (btn) { btn.disabled = false; btn.innerText = t("loginBtn"); }
       render();
       return;
     }
@@ -243,8 +323,8 @@ async function handlePasswordSubmit(ev) {
     saveCache();
     render();
   } catch (e) {
-    STATE.authError = "تعذر الاتصال بالسيرفر، تأكد من الإنترنت وحاول تاني";
-    if (btn) { btn.disabled = false; btn.innerText = "دخول"; }
+    STATE.authError = t("connectionError");
+    if (btn) { btn.disabled = false; btn.innerText = t("loginBtn"); }
     render();
   }
 }
@@ -262,7 +342,7 @@ async function handleSubmit(ev) {
   const supervisorName = isAdmin ? FORM.supervisor : STATE.name;
   const department = isAdmin ? FORM.department : STATE.department;
   if (!supervisorName || !department || !FORM.orderNo || !FORM.start || !FORM.end) {
-    STATE.error = "من فضلك املأ كل الحقول"; render(); return;
+    STATE.error = t("fillAllFields"); render(); return;
   }
   STATE.error = ""; STATE.saving = true; render();
   const { actualHours, laborHours } = computeHours(FORM.start, FORM.end, FORM.breakMin, FORM.workers);
@@ -280,7 +360,7 @@ async function handleSubmit(ev) {
     FORM.orderNo=""; FORM.workers=""; FORM.start=""; FORM.end=""; FORM.breakMin="";
     FORM.startH=""; FORM.startM=""; FORM.endH=""; FORM.endM="";
     if (isAdmin) await loadAll(true); else STATE.saving = false;
-  } catch(e) { STATE.error = "تعذر حفظ التسجيلة، حاول تاني"; }
+  } catch(e) { STATE.error = t("entrySaveFailed"); }
   STATE.saving = false; render();
 }
 
@@ -289,7 +369,7 @@ async function handleDelete(id) {
     const res = await apiCall("deleteEntry", { password: STATE.password, id });
     if (!res.ok) throw new Error();
     await loadAll(true);
-  } catch(e) { STATE.error = "تعذر حذف التسجيلة"; render(); }
+  } catch(e) { STATE.error = t("deleteFailed"); render(); }
 }
 
 async function toggleVerify(id, checked) {
@@ -300,7 +380,7 @@ async function toggleVerify(id, checked) {
     if (en) en.verified = checked;
     saveCache();
     render();
-  } catch(e) { STATE.error = "تعذر تحديث حالة التحقق"; render(); }
+  } catch(e) { STATE.error = t("verifyFailed"); render(); }
 }
 
 async function saveSettings(next) {
@@ -309,7 +389,7 @@ async function saveSettings(next) {
     const res = await apiCall("saveSettings", { password: STATE.password, settings: next });
     if (!res.ok) throw new Error();
     saveCache();
-  } catch(e) { STATE.error = "تعذر حفظ الإعدادات"; render(); }
+  } catch(e) { STATE.error = t("settingsSaveFailed"); render(); }
 }
 
 let _xlsxLoading = null;
@@ -327,25 +407,26 @@ function loadXLSX() {
 }
 async function exportExcel() {
   const btn = document.getElementById("exportBtn");
-  if (btn) { btn.disabled = true; btn.innerText = "جاري التجهيز..."; }
+  if (btn) { btn.disabled = true; btn.innerText = t("exporting"); }
   try {
     await loadXLSX();
     const rows = STATE.entries.map(en => ({
-      "التاريخ": en.date, "المشرف": en.supervisor, "القسم": en.department, "رقم الطلب": en.orderNo,
-      "عدد العمال": en.workers, "من": en.start, "الى": en.end, "الاستراحة (دقيقة)": en.breakMin,
-      "الساعات الفعلية": Number(Number(en.actualHours).toFixed(2)),
-      "ساعات العمل": Number(Number(en.laborHours).toFixed(2)),
-      "تكلفة العمالة": Number((Number(en.laborHours) * ((STATE.settings&&STATE.settings.hourlyRate)||0)).toFixed(2)),
-      "تم التحقق": en.verified ? "نعم" : "لا"
+      [t("colDate")]: en.date, [t("colSupervisor")]: en.supervisor, [t("colDepartment")]: en.department, [t("colOrderNo")]: en.orderNo,
+      [t("colWorkers")]: en.workers, [t("colFrom")]: en.start, [t("colTo")]: en.end, [t("colBreak")]: en.breakMin,
+      [t("colActualHours")]: Number(Number(en.actualHours).toFixed(2)),
+      [t("colLaborHours")]: Number(Number(en.laborHours).toFixed(2)),
+      [t("colDirectCost")]: Number((Number(en.laborHours) * ((STATE.settings&&STATE.settings.hourlyRate)||0)).toFixed(2)),
+      [t("colIndirectCost")]: Number((Number(en.laborHours) * ((STATE.settings&&STATE.settings.indirectHourlyRate)||0)).toFixed(2)),
+      [t("colVerified")]: en.verified ? "Y" : "N"
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "السجل");
-    XLSX.writeFile(wb, "سجل_ساعات_العمل.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Log");
+    XLSX.writeFile(wb, "labor_cost_log.xlsx");
   } catch(e) {
-    STATE.error = "تعذر تجهيز ملف الإكسيل"; render();
+    STATE.error = t("exportFailed"); render();
   } finally {
-    if (btn) { btn.disabled = false; btn.innerText = "⬇ تصدير Excel"; }
+    if (btn) { btn.disabled = false; btn.innerText = t("exportBtn"); }
   }
 }
 
@@ -357,25 +438,34 @@ function computeSummary() {
   });
   return Object.entries(byOrder).map(([orderNo, depts]) => {
     const total = Object.values(depts).reduce((a,b)=>a+b,0);
-    return { orderNo, depts, total, cost: total*((STATE.settings&&STATE.settings.hourlyRate)||0) };
+    const rate = (STATE.settings&&STATE.settings.hourlyRate)||0;
+    const indirectRate = (STATE.settings&&STATE.settings.indirectHourlyRate)||0;
+    const directCost = total*rate;
+    const indirectCost = total*indirectRate;
+    return { orderNo, depts, total, directCost, indirectCost, totalCost: directCost+indirectCost };
   });
 }
 
 function esc(s) { const d=document.createElement("div"); d.innerText = s==null?"":s; return d.innerHTML; }
 
+function langSwitcherHtml() {
+  const langs = [ {id:"ar", label:"ع"}, {id:"en", label:"EN"} ];
+  return `<div class="lang-switch">${langs.map(l=>`<button class="lang-btn ${STATE.lang===l.id?'active':''}" onclick="setLang('${l.id}')">${l.label}</button>`).join("")}</div>`;
+}
+
 function renderAuthScreen() {
   return `
-    <div class="header"><div class="header-inner"><div class="header-left">
-      <div><h1 class="title">Labor Cost</h1></div>
-    </div></div></div>
+    <div class="header"><div class="header-inner">
+      <div class="header-left"><div><h1 class="title">Labor Cost</h1></div></div>
+      ${langSwitcherHtml()}
+    </div></div>
     <div class="auth-wrap">
       <div class="auth-card">
-        <h2 class="auth-title">تسجيل الدخول</h2>
-        <p class="auth-sub">اكتب الباسورد بتاعك للدخول</p>
+        <h2 class="auth-title">${t("loginTitle")}</h2>
         ${STATE.authError ? `<div class="error-banner" style="margin:0 0 14px;">${esc(STATE.authError)}</div>` : ""}
         <form id="pwForm">
-          <input type="password" class="input" style="text-align:center; font-size:18px; margin-bottom:14px;" placeholder="الباسورد" value="${esc(PW_INPUT)}" oninput="PW_INPUT=this.value" autofocus>
-          <button type="submit" id="pwSubmitBtn" class="submit-btn" style="margin-top:0;">دخول</button>
+          <input type="password" class="input" style="text-align:center; font-size:18px; margin-bottom:14px;" placeholder="${t('passwordPlaceholder')}" value="${esc(PW_INPUT)}" oninput="PW_INPUT=this.value" autofocus>
+          <button type="submit" id="pwSubmitBtn" class="submit-btn" style="margin-top:0;">${t("loginBtn")}</button>
         </form>
       </div>
     </div>`;
@@ -385,31 +475,31 @@ function render() {
   const app = document.getElementById("app");
 
   if (CONFIG.SCRIPT_URL.includes("PASTE_YOUR")) {
-    app.innerHTML = `<div class="setup-card"><h2>خطوة إعداد ناقصة</h2><p>حط رابط جوجل أبس سكريبت في <code>CONFIG.SCRIPT_URL</code>.</p></div>`;
+    app.innerHTML = `<div class="setup-card"><h2>${t("setupMissing")}</h2><p>${t("setupMissingText")} <code>CONFIG.SCRIPT_URL</code>.</p></div>`;
     return;
   }
-  if (!STATE.booted) { app.innerHTML = `<div class="loading-wrap">⏳ جاري التحميل...</div>`; return; }
+  if (!STATE.booted) { app.innerHTML = `<div class="loading-wrap">${t("loading")}</div>`; return; }
   if (!STATE.password || !STATE.role) {
     app.innerHTML = renderAuthScreen();
     const f = document.getElementById("pwForm");
     if (f) f.addEventListener("submit", handlePasswordSubmit);
     return;
   }
-  if (STATE.loading) { app.innerHTML = `<div class="loading-wrap">⏳ جاري تحميل البيانات...</div>`; return; }
+  if (STATE.loading) { app.innerHTML = `<div class="loading-wrap">${t("loadingData")}</div>`; return; }
 
   const isAdmin = STATE.role === "admin";
   const isReviewer = STATE.role === "reviewer";
   const isSupervisor = STATE.role === "supervisor";
 
   const tabs = isAdmin
-    ? [ {id:"new", label:"تسجيل جديد"}, {id:"log", label:"السجل"}, {id:"summary", label:"الملخص"}, {id:"settings", label:"الإعدادات"} ]
+    ? [ {id:"new", label:t("tabNew")}, {id:"log", label:t("tabLog")}, {id:"summary", label:t("tabSummary")}, {id:"settings", label:t("tabSettings")} ]
     : isReviewer
-    ? [ {id:"review", label:"مراجعة التسجيلات"} ]
-    : [ {id:"new", label:"تسجيل جديد"} ];
+    ? [ {id:"review", label:t("tabReview")} ]
+    : [ {id:"new", label:t("tabNew")} ];
   if (isReviewer) STATE.tab = "review";
   if (isSupervisor) STATE.tab = "new";
 
-  const roleLabel = isAdmin ? "أدمن" : isReviewer ? "مشرف عام" : "مشرف";
+  const roleLabel = isAdmin ? t("roleAdmin") : isReviewer ? t("roleReviewer") : t("roleSupervisor");
 
   let html = `
     <div class="header"><div class="header-inner">
@@ -417,12 +507,13 @@ function render() {
         <div><h1 class="title">Labor Cost</h1></div>
       </div>
       <div style="display:flex; align-items:center; gap:10px;">
+        ${langSwitcherHtml()}
         <span class="whoami">${isSupervisor ? esc(STATE.name)+' - ' : ''}<span class="role-badge">${roleLabel}</span></span>
-        <button class="logout-btn" onclick="logout()">خروج</button>
+        <button class="logout-btn" onclick="logout()">${t("logoutBtn")}</button>
       </div>
     </div></div>
     <nav class="tabs">
-      ${tabs.map(t=>`<button class="tab-btn ${STATE.tab===t.id?'active':''}" onclick="setTab('${t.id}')">${t.label}</button>`).join("")}
+      ${tabs.map(tb=>`<button class="tab-btn ${STATE.tab===tb.id?'active':''}" onclick="setTab('${tb.id}')">${tb.label}</button>`).join("")}
     </nav>
     ${STATE.error ? `<div class="error-banner">${esc(STATE.error)}</div>` : ""}
     <main>`;
@@ -432,51 +523,51 @@ function render() {
     html += `
       <form class="card" id="entryForm">
         <div class="grid2">
-          <label class="field"><span class="field-label">المشرف</span>
+          <label class="field"><span class="field-label">${t("fieldSupervisor")}</span>
             ${isAdmin
               ? `<select onchange="onAdminSupervisorChange(this.value)">
-                   <option value="أدمن" ${FORM.supervisor==='أدمن'?'selected':''}>أدمن (بدون قسم ثابت)</option>
+                   <option value="أدمن" ${FORM.supervisor==='أدمن'?'selected':''}>${t("adminOption")}</option>
                    ${(STATE.settings.supervisors||[]).map(s=>`<option value="${esc(s.name)}" ${FORM.supervisor===s.name?'selected':''}>${esc(s.name)}</option>`).join("")}
                  </select>`
               : `<div class="locked-box">${esc(STATE.name)}</div>`}
           </label>
-          <label class="field"><span class="field-label">القسم</span>
+          <label class="field"><span class="field-label">${t("fieldDepartment")}</span>
             ${isAdmin
               ? `<select onchange="FORM.department=this.value">
                    ${(STATE.settings.departments||[]).map(d=>`<option value="${esc(d)}" ${FORM.department===d?'selected':''}>${esc(d)}</option>`).join("")}
                  </select>`
               : `<div class="locked-box">${esc(STATE.department)}</div>`}
           </label>
-          <label class="field"><span class="field-label">رقم الطلب</span>
+          <label class="field"><span class="field-label">${t("fieldOrderNo")}</span>
             <input class="input" value="${esc(FORM.orderNo)}" oninput="FORM.orderNo=this.value">
           </label>
-          <label class="field"><span class="field-label">عدد العمال</span>
+          <label class="field"><span class="field-label">${t("fieldWorkers")}</span>
             <input type="number" min="0" class="input" value="${esc(FORM.workers)}" oninput="FORM.workers=this.value; renderPreview();" placeholder="0">
           </label>
-          <label class="field"><span class="field-label">وقت البداية</span>
+          <label class="field"><span class="field-label">${t("fieldStart")}</span>
             <div class="time-pair">
               <select onchange="FORM.startH=this.value; updateStart();">${hourOptions(FORM.startH)}</select>
               <span class="time-colon">:</span>
               <select onchange="FORM.startM=this.value; updateStart();">${minuteOptions(FORM.startM)}</select>
             </div>
           </label>
-          <label class="field"><span class="field-label">وقت النهاية</span>
+          <label class="field"><span class="field-label">${t("fieldEnd")}</span>
             <div class="time-pair">
               <select onchange="FORM.endH=this.value; updateEnd();">${hourOptions(FORM.endH)}</select>
               <span class="time-colon">:</span>
               <select onchange="FORM.endM=this.value; updateEnd();">${minuteOptions(FORM.endM)}</select>
             </div>
           </label>
-          <label class="field"><span class="field-label">الاستراحة (دقيقة)</span>
+          <label class="field"><span class="field-label">${t("fieldBreak")}</span>
             <input type="number" min="0" class="input" value="${esc(FORM.breakMin)}" oninput="FORM.breakMin=this.value; renderPreview();" placeholder="0">
           </label>
         </div>
         <div class="preview-box" id="previewBox">
-          <div class="preview-item"><span class="preview-label">الساعات الفعلية</span><span class="preview-value">${preview.actualHours.toFixed(2)}</span></div>
+          <div class="preview-item"><span class="preview-label">${t("previewActual")}</span><span class="preview-value">${preview.actualHours.toFixed(2)}</span></div>
           <div class="preview-divider"></div>
-          <div class="preview-item"><span class="preview-label">ساعات العمل</span><span class="preview-value">${preview.laborHours.toFixed(2)}</span></div>
+          <div class="preview-item"><span class="preview-label">${t("previewLabor")}</span><span class="preview-value">${preview.laborHours.toFixed(2)}</span></div>
         </div>
-        <button type="submit" class="submit-btn" ${STATE.saving?'disabled':''}>${STATE.saving?'جاري التسجيل...':'تسجيل'}</button>
+        <button type="submit" class="submit-btn" ${STATE.saving?'disabled':''}>${STATE.saving?t("submitting"):t("submitBtn")}</button>
       </form>`;
   }
 
@@ -491,18 +582,20 @@ function render() {
     const summary = computeSummary();
     html += `
       <div class="card">
-        <h2 class="card-title">ملخص حسب رقم الطلب</h2>
+        <h2 class="card-title">${t("summaryTitle")}</h2>
         <div class="table-wrap"><table>
-          <thead><tr><th>رقم الطلب</th>${(STATE.settings.departments||[]).map(d=>`<th>${esc(d)}</th>`).join("")}<th>إجمالي ساعات العمل</th><th>تكلفة العمالة</th></tr></thead>
+          <thead><tr><th>${t("colOrderNo")}</th>${(STATE.settings.departments||[]).map(d=>`<th>${esc(d)}</th>`).join("")}<th>${t("colTotalHours")}</th><th>${t("colDirectCost")}</th><th>${t("colIndirectCost")}</th><th>${t("colTotalCost")}</th></tr></thead>
           <tbody>
             ${summary.map(row=>`
               <tr>
                 <td>${esc(row.orderNo)}</td>
                 ${(STATE.settings.departments||[]).map(d=>`<td>${(row.depts[d]||0).toFixed(2)}</td>`).join("")}
                 <td style="font-weight:700">${row.total.toFixed(2)}</td>
-                <td style="font-weight:700; color:var(--walnut)">${row.cost.toFixed(2)}</td>
+                <td>${row.directCost.toFixed(2)}</td>
+                <td>${row.indirectCost.toFixed(2)}</td>
+                <td style="font-weight:700; color:var(--walnut)">${row.totalCost.toFixed(2)}</td>
               </tr>`).join("")}
-            ${summary.length===0 ? `<tr><td colspan="${(STATE.settings.departments||[]).length+3}" class="empty-row">لسه مفيش بيانات</td></tr>` : ""}
+            ${summary.length===0 ? `<tr><td colspan="${(STATE.settings.departments||[]).length+4}" class="empty-row">${t("noData")}</td></tr>` : ""}
           </tbody>
         </table></div>
       </div>`;
@@ -512,63 +605,63 @@ function render() {
     html += `
       <div class="settings-grid">
         <div class="card">
-          <h2 class="card-title">المشرفين</h2>
+          <h2 class="card-title">${t("settingsSupervisors")}</h2>
           <ul class="list">
             ${(STATE.settings.supervisors||[]).map((s,i)=>`
               <li class="list-item">
                 <span>${esc(s.name)} <span style="color:var(--muted);">(${esc(s.department)})</span></span>
                 <span class="list-item-actions">
-                  <button class="small-edit" title="تغيير القسم" onclick="editSupervisorDept(${i})">🏷️</button>
-                  <button class="small-edit" title="تغيير الباسورد" onclick="editSupervisorPassword(${i})">↻</button>
-                  <button class="small-delete" title="حذف" onclick="removeSupervisor(${i})">✕</button>
+                  <button class="small-edit" title="${t('changeDept')}" onclick="editSupervisorDept(${i})">🏷️</button>
+                  <button class="small-edit" title="${t('changePassword')}" onclick="editSupervisorPassword(${i})">↻</button>
+                  <button class="small-delete" title="${t('delete')}" onclick="removeSupervisor(${i})">✕</button>
                 </span>
               </li>`).join("")}
-            ${(STATE.settings.supervisors||[]).length===0 ? `<li class="list-item">مفيش مشرفين لسه</li>` : ""}
+            ${(STATE.settings.supervisors||[]).length===0 ? `<li class="list-item">${t("noSupervisorsYet")}</li>` : ""}
           </ul>
           <div class="grid2" style="margin-bottom:10px;">
-            <input class="input" id="newSupName" placeholder="اسم المشرف">
+            <input class="input" id="newSupName" placeholder="${t('supNamePlaceholder')}">
             <select id="newSupDept">
               ${(STATE.settings.departments||[]).map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join("")}
             </select>
-            <input class="input" id="newSupPassword" placeholder="باسورد خاص بيه">
+            <input class="input" id="newSupPassword" placeholder="${t('supPasswordPlaceholder')}">
           </div>
-          <button class="add-btn" style="width:100%;" onclick="addSupervisor()">إضافة مشرف</button>
+          <button class="add-btn" style="width:100%;" onclick="addSupervisor()">${t("addSupervisorBtn")}</button>
         </div>
 
         <div class="card">
-          <h2 class="card-title">الأقسام</h2>
+          <h2 class="card-title">${t("settingsDepartments")}</h2>
           <ul class="list">
             ${(STATE.settings.departments||[]).map(d=>`
               <li class="list-item"><span>${esc(d)}</span><button class="small-delete" onclick="removeDept('${esc(d)}')">✕</button></li>`).join("")}
           </ul>
           <div class="add-row">
-            <input class="input" id="newDept" placeholder="اسم قسم جديد">
+            <input class="input" id="newDept" placeholder="${t('addDeptPlaceholder')}">
             <button class="add-btn" onclick="addDept()">+</button>
           </div>
         </div>
 
         <div class="card">
-          <h2 class="card-title">سعر الساعة</h2>
+          <h2 class="card-title">${t("settingsDirectRate")}</h2>
           <div class="add-row">
             <input type="number" min="0" class="input" id="rateInput" value="${STATE.settings.hourlyRate}">
-            <button class="add-btn" onclick="saveRate()">حفظ</button>
+            <button class="add-btn" onclick="saveRate()">${t("save")}</button>
           </div>
         </div>
 
         <div class="card">
-          <h2 class="card-title">باسورد الأدمن والمشرف العام</h2>
-          <div class="field" style="margin-bottom:12px;">
-            <span class="field-label">باسورد الأدمن (كل الصلاحيات)</span>
-            <div class="add-row">
-              <input class="input" id="adminPwInput" value="${esc(STATE.settings.adminPassword||'')}">
-              <button class="add-btn" onclick="saveAdminPassword()">حفظ</button>
-            </div>
+          <h2 class="card-title">${t("settingsIndirectRate")}</h2>
+          <div class="add-row">
+            <input type="number" min="0" class="input" id="indirectRateInput" value="${STATE.settings.indirectHourlyRate||0}">
+            <button class="add-btn" onclick="saveIndirectRate()">${t("save")}</button>
           </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">${t("settingsReviewerPw")}</h2>
           <div class="field">
-            <span class="field-label">باسورد المشرف العام (مراجعة بس)</span>
             <div class="add-row">
               <input class="input" id="reviewerPwInput" value="${esc(STATE.settings.reviewerPassword||'')}">
-              <button class="add-btn" onclick="saveReviewerPassword()">حفظ</button>
+              <button class="add-btn" onclick="saveReviewerPassword()">${t("save")}</button>
             </div>
           </div>
         </div>
@@ -583,13 +676,13 @@ function render() {
 }
 
 function renderEntriesTable(withDelete) {
-  const cols = ["تم التحقق","التاريخ","المشرف","القسم","رقم الطلب","العمال","من","الى","استراحة","ساعات فعلية","ساعات عمل"];
+  const cols = [t("colVerified"), t("colDate"), t("colSupervisor"), t("colDepartment"), t("colOrderNo"), t("colWorkers"), t("colFrom"), t("colTo"), t("colBreak"), t("colActualHours"), t("colLaborHours")];
   if (withDelete) cols.push("");
   return `
     <div class="card">
       <div class="log-header">
-        <h2 class="card-title">${withDelete ? 'السجل' : 'مراجعة التسجيلات'} (${STATE.entries.length})</h2>
-        <button class="export-btn" id="exportBtn" onclick="exportExcel()">⬇ تصدير Excel</button>
+        <h2 class="card-title">${withDelete ? t('tabLog') : t('tabReview')} (${STATE.entries.length})</h2>
+        <button class="export-btn" id="exportBtn" onclick="exportExcel()">${t("exportBtn")}</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr>${cols.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
@@ -602,7 +695,7 @@ function renderEntriesTable(withDelete) {
               <td>${Number(en.actualHours).toFixed(2)}</td><td>${Number(en.laborHours).toFixed(2)}</td>
               ${withDelete ? `<td><button class="delete-btn" onclick="handleDelete('${en.id}')">✕</button></td>` : ""}
             </tr>`).join("")}
-          ${STATE.entries.length===0 ? `<tr><td colspan="${cols.length}" class="empty-row">لسه مفيش تسجيلات</td></tr>` : ""}
+          ${STATE.entries.length===0 ? `<tr><td colspan="${cols.length}" class="empty-row">${withDelete ? t('noEntries') : t('noEntriesMine')}</td></tr>` : ""}
         </tbody>
       </table></div>
     </div>`;
@@ -613,9 +706,9 @@ function renderPreview() {
   const box = document.getElementById("previewBox");
   if (box) {
     box.innerHTML = `
-      <div class="preview-item"><span class="preview-label">الساعات الفعلية</span><span class="preview-value">${preview.actualHours.toFixed(2)}</span></div>
+      <div class="preview-item"><span class="preview-label">${t("previewActual")}</span><span class="preview-value">${preview.actualHours.toFixed(2)}</span></div>
       <div class="preview-divider"></div>
-      <div class="preview-item"><span class="preview-label">ساعات العمل</span><span class="preview-value">${preview.laborHours.toFixed(2)}</span></div>`;
+      <div class="preview-item"><span class="preview-label">${t("previewLabor")}</span><span class="preview-value">${preview.laborHours.toFixed(2)}</span></div>`;
   }
 }
 
@@ -632,9 +725,9 @@ function addSupervisor() {
   const name = document.getElementById("newSupName").value.trim();
   const department = document.getElementById("newSupDept").value;
   const password = document.getElementById("newSupPassword").value.trim();
-  if (!name || !department || !password) { STATE.error = "من فضلك املأ اسم المشرف وقسمه وباسورده"; render(); return; }
+  if (!name || !department || !password) { STATE.error = t("fillSupervisorFields"); render(); return; }
   const list = STATE.settings.supervisors || [];
-  if (list.some(s=>s.name===name)) { STATE.error = "فيه مشرف بنفس الاسم بالفعل"; render(); return; }
+  if (list.some(s=>s.name===name)) { STATE.error = t("duplicateSupervisor"); render(); return; }
   saveSettings(Object.assign({}, STATE.settings, { supervisors: [...list, { name, department, password }] }));
 }
 function removeSupervisor(index) {
@@ -644,7 +737,7 @@ function removeSupervisor(index) {
 }
 function editSupervisorPassword(index) {
   const list = (STATE.settings.supervisors||[]).slice();
-  const newPw = prompt("باسورد جديد لـ " + list[index].name + ":");
+  const newPw = prompt(t("newPasswordPrompt") + " " + list[index].name + ":");
   if (!newPw) return;
   list[index] = Object.assign({}, list[index], { password: newPw.trim() });
   saveSettings(Object.assign({}, STATE.settings, { supervisors: list }));
@@ -652,7 +745,7 @@ function editSupervisorPassword(index) {
 function editSupervisorDept(index) {
   const list = (STATE.settings.supervisors||[]).slice();
   const depts = STATE.settings.departments || [];
-  const newDept = prompt("اكتب اسم القسم الجديد لـ " + list[index].name + " (من: " + depts.join("، ") + ")");
+  const newDept = prompt(t("newDeptPrompt") + " " + list[index].name + " (" + depts.join("، ") + ")");
   if (!newDept) return;
   list[index] = Object.assign({}, list[index], { department: newDept.trim() });
   saveSettings(Object.assign({}, STATE.settings, { supervisors: list }));
@@ -668,12 +761,9 @@ function saveRate() {
   const val = Number(document.getElementById("rateInput").value) || 0;
   saveSettings(Object.assign({}, STATE.settings, { hourlyRate: val }));
 }
-function saveAdminPassword() {
-  const val = document.getElementById("adminPwInput").value.trim();
-  if (!val) return;
-  saveSettings(Object.assign({}, STATE.settings, { adminPassword: val }));
-  STATE.password = val;
-  saveLocal();
+function saveIndirectRate() {
+  const val = Number(document.getElementById("indirectRateInput").value) || 0;
+  saveSettings(Object.assign({}, STATE.settings, { indirectHourlyRate: val }));
 }
 function saveReviewerPassword() {
   const val = document.getElementById("reviewerPwInput").value.trim();
