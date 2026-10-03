@@ -481,19 +481,7 @@
 </head>
 <body>
 
-<!-- Password lock -->
-<div class="lock-overlay" id="lock-overlay">
-  <div class="lock-box">
-    <div class="lock-icon">🔒</div>
-    <h2>Inventory Transfer Tool</h2>
-    <p>Enter your password to continue</p>
-    <input type="password" id="lock-password" placeholder="Password" onkeydown="if(event.key==='Enter') checkPassword()">
-    <button class="btn btn-primary" id="lock-login-btn" onclick="checkPassword()">Login</button>
-    <div class="lock-err" id="lock-err">Incorrect password</div>
-  </div>
-</div>
-
-<div id="app-content" style="display:none">
+<div id="app-content" style="display:block">
 
 <div class="header">
   <div>
