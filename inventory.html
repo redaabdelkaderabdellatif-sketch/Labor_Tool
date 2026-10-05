@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventory Transfer Tool — Gaty</title>
+<script>
+(function () {
+  var t = localStorage.getItem("gaty_inv_gate");
+  var ok = t && (Date.now() - Number(t) < 3600000); // لازم يكون داخل من لوحة التحكم خلال آخر ساعة
+  if (!ok) { window.location.replace("index.html"); }
+})();
+</script>
 <script src="sha256.js"></script>
 <script src="xlsx.full.min.js"></script>
 <script src="exceljs.min.js"></script>
