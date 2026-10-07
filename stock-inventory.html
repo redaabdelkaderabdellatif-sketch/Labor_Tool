@@ -604,7 +604,8 @@
 </div>
 
 <div class="signature" style="text-align:center;margin:20px;color:var(--muted)">Reda Alshrkawy</div>
-<script>const state={};function findColumn(headerRow, candidates) {
+<script>const state={};
+const WIP_OPID_HEADERS = ['رقم العملية', 'operation no', 'transaction no'];function findColumn(headerRow, candidates) {
   // Pass 1: exact match, checked in candidate priority order
   for (const cand of candidates) {
     const idx = headerRow.findIndex(cell => String(cell || '').trim().toLowerCase() === cand.toLowerCase());
@@ -727,7 +728,7 @@ function wipLog(msg, type = '') {
   el.scrollTop = el.scrollHeight;
 }
 
-const WIP_OPID_HEADERS = ['رقم العملية', 'operation no', 'transaction no'];
+
 
 function findWipHeaderRow(raw) {
   for (let i = 0; i < Math.min(20, raw.length); i++) {
