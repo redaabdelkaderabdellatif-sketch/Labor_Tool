@@ -914,17 +914,6 @@ function switchMainTab(name) {
   document.getElementById('app-subtitle').textContent = MAIN_TAB_INFO[name].subtitle;
 }
 
-function switchInvTab(name) {
-  document.getElementById('invtab-raw').style.display = name === 'raw' ? 'block' : 'none';
-  document.getElementById('invtab-wip').style.display = name === 'wip' ? 'block' : 'none';
-  document.getElementById('invtab-finished').style.display = name === 'finished' ? 'block' : 'none';
-  document.getElementById('invtab-showroom').style.display = name === 'showroom' ? 'block' : 'none';
-  document.getElementById('invtabbtn-raw').classList.toggle('active', name === 'raw');
-  document.getElementById('invtabbtn-wip').classList.toggle('active', name === 'wip');
-  document.getElementById('invtabbtn-finished').classList.toggle('active', name === 'finished');
-  document.getElementById('invtabbtn-showroom').classList.toggle('active', name === 'showroom');
-}
-
 // The credential check is done against a list stored in a private GitHub
 // Gist, not values baked into this file. This means credentials can be
 // changed at any time from any browser (just edit the Gist) without ever
@@ -2024,17 +2013,7 @@ function downloadUncostedCategory(category) {
   uncostedLog(`Downloaded ${sheetName}`, 'ok');
 }
 
-// ===== Supplier Debt Aging (from a general ledger export) =====
-//
-// Tailored to the "دفتر الأستاذ للحسابات الفرعية" (Sub-Account Ledger)
-// export format: the sheet is a series of account blocks separated by
-// blank rows. Each block starts with a header line (reference/code +
-// description, no date, no amount) — e.g. "211100055 | مؤسسة مهنا سليمان
-// ... | (balance)" — followed by an opening-balance line and then the
-// account's individual transactions (each with a date and a debit or
-// credit). The parent control account (code "2111") is a summary-only
-// block with no real transactions of its own and is excluded from results.
-
+// Header aliases used by the Work In Process statement parser.
 const LEDGER_REF_HEADERS = ['رقم المرجع', 'reference', 'ref'];
 const LEDGER_DESC_HEADERS = ['تعريف', 'اسم الحساب', 'اسم المورد', 'البيان', 'description'];
 const LEDGER_DATE_HEADERS = ['تاريخ العملية', 'التاريخ', 'تاريخ القيد', 'date', 'posting date'];
