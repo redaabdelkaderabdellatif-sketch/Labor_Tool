@@ -504,7 +504,6 @@
 <div class="main-tab-nav">
   <button class="main-tab-btn active" id="maintabbtn-cost" onclick="switchMainTab('cost')">💰 Cost</button>
   <button class="main-tab-btn" id="maintabbtn-workshop" onclick="switchMainTab('workshop')">🕒 Labor Cost</button>
-  <button class="main-tab-btn" id="maintabbtn-inventory" onclick="switchMainTab('inventory')">📦 Inventory</button>
 </div>
 
 <div id="maintab-cost" class="main-tab-page">
@@ -882,133 +881,7 @@
 </div>
 <!-- /maintab-workshop -->
 
-<div id="maintab-inventory" class="main-tab-page" style="display:none">
 
-<div class="tab-nav">
-  <button class="tab-btn" id="invtabbtn-raw" onclick="switchInvTab('raw')">🧱 Raw Materials</button>
-  <button class="tab-btn active" id="invtabbtn-wip" onclick="switchInvTab('wip')">⚙️ Work In Process</button>
-  <button class="tab-btn" id="invtabbtn-finished" onclick="switchInvTab('finished')">📦 Finished Goods</button>
-  <button class="tab-btn" id="invtabbtn-showroom" onclick="switchInvTab('showroom')">🖼️ Showroom</button>
-</div>
-
-<div id="invtab-raw" class="tab-page" style="display:none">
-  <div class="card">
-    <div class="card-title"><span class="dot dot-blue"></span>Raw Materials Inventory</div>
-    <p style="font-size:12px;color:var(--muted)">Not built yet — tell me what you need here and I'll add it.</p>
-  </div>
-</div>
-
-<div id="invtab-wip" class="tab-page">
-
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-title">
-      <span class="dot dot-blue"></span>
-      WIP Account Statement (كشف حساب)
-    </div>
-    <div class="upload-zone" id="zone-wip">
-      <input type="file" id="file-wip" accept=".xlsx,.xls" onchange="handleWipStatement(this)">
-      <div class="upload-icon">📄</div>
-      <div class="upload-label"><strong>Drag & drop</strong> or click to choose<br>The combined account statement for the WIP account (111200003 — مخزون الانتاج تحت التشغيل)</div>
-      <div class="file-name" id="fname-wip"></div>
-    </div>
-    <div class="stats-row" id="stats-wip"></div>
-    <div class="log-box" id="wip-log" style="margin-top:12px">Waiting for the statement file...</div>
-  </div>
-
-  <div class="card" id="wip-ongoing-card" style="margin-bottom:16px; display:none">
-    <div class="card-title">⚙️ 2026 Ongoing Patterns (confirmed)</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-      A row stays in the ongoing 2026 ledger if its description contains any one of these patterns — checked before the settlement categories below. Edit, add, or remove freely; saved to this device.
-    </p>
-    <div class="preview-table-wrap">
-      <table>
-        <thead><tr><th>#</th><th>Match text (in description)</th><th></th></tr></thead>
-        <tbody id="wip-ongoing-body"></tbody>
-      </table>
-    </div>
-    <button class="btn btn-outline" style="width:auto;padding:8px 16px;margin-top:10px" onclick="addWipOngoingPattern()">+ Add pattern</button>
-  </div>
-
-  <div class="card" id="wip-categories-card" style="margin-bottom:16px; display:none">
-    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-      <span>📋 ملخص رصيد 2025 (2025 Settlement Categories)</span>
-      <span id="wip-last-updated" style="font-size:11px; font-weight:600; color:var(--muted);"></span>
-    </div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-      Anything that doesn't match a 2026 ongoing pattern above is a one-off entry clearing an old 2025 balance, grouped into these 4 categories — same layout as your reference template. <strong>The label and match text are my best guess from analyzing your example files — please review and correct them if needed.</strong> Checked top row first; anything matching none of the 4 is listed individually below ("outside classification"). Both the target Value and the match text are saved to this device and stay exactly as you set them.
-    </p>
-    <div class="preview-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="min-width:260px">الجرد الفعلي وما يجب ان يكون</th>
-            <th style="min-width:200px">Match text (in description)</th>
-            <th>القيمة (Value)</th>
-            <th>ما تم تسجيلة (Posted)</th>
-            <th>الرصيد (Remaining)</th>
-          </tr>
-        </thead>
-        <tbody id="wip-categories-body"></tbody>
-        <tfoot id="wip-categories-foot"></tfoot>
-      </table>
-    </div>
-    <div id="wip-opening-balance-note" style="font-size:11px; color:var(--muted); margin-top:8px;"></div>
-  </div>
-
-  <div class="card" id="wip-outside-card" style="margin-bottom:16px; display:none">
-    <div class="card-title">🔍 قيود برا التصنيف (Entries Outside Classification)</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-      Every individual row that matched none of the 4 categories above — the one thing I'd flag for a closer look is <strong>"المواد المستخدمة داخليا"</strong> (materials used internally / AFTER COST / REWORK), highlighted below since it's genuinely ambiguous whether it belongs in 2026 or 2025.
-    </p>
-    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">قيود برا التصنيف — مدين (Debit)</div>
-    <div class="preview-table-wrap">
-      <table>
-        <thead><tr><th>Date</th><th>Reference</th><th>Description</th><th>Amount</th><th></th></tr></thead>
-        <tbody id="wip-outside-debit-body"></tbody>
-      </table>
-    </div>
-    <div style="font-size:12px;font-weight:700;color:var(--text);margin:14px 0 6px">قيود برا التصنيف — دائن (Credit)</div>
-    <div class="preview-table-wrap">
-      <table>
-        <thead><tr><th>Date</th><th>Reference</th><th>Description</th><th>Amount</th><th></th></tr></thead>
-        <tbody id="wip-outside-credit-body"></tbody>
-      </table>
-    </div>
-    <div style="display:flex; justify-content:flex-end; gap:24px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-size:13px;">
-      <div>المتبقي (Remaining after these): <strong id="wip-outside-remaining">0</strong></div>
-    </div>
-  </div>
-
-  <div class="card" id="wip-result-card" style="margin-bottom:16px; display:none">
-    <div class="card-title">📊 Split Result</div>
-    <div class="summary-grid">
-      <div class="summary-box"><div class="num" id="wip-2026-count">0</div><div class="lbl">2026 Rows (ongoing)</div></div>
-      <div class="summary-box"><div class="num" id="wip-2025-count">0</div><div class="lbl">2025 Rows (settlement)</div></div>
-      <div class="summary-box"><div class="num" id="wip-2025-remaining">0</div><div class="lbl">Total 2025 Remaining</div></div>
-      <div class="summary-box"><div class="num" id="wip-unclassified-count">0</div><div class="lbl">Outside Classification</div></div>
-    </div>
-    <div id="wip-gate-message" style="display:none; font-size:12px; color:var(--red); font-weight:600; margin-bottom:8px;"></div>
-    <button class="btn btn-success" id="wip-download-btn" onclick="downloadWipSplit()">⬇️ Download Split Workbook (.xlsx)</button>
-  </div>
-
-</div>
-
-<div id="invtab-finished" class="tab-page" style="display:none">
-  <div class="card">
-    <div class="card-title"><span class="dot dot-blue"></span>Finished Goods Inventory</div>
-    <p style="font-size:12px;color:var(--muted)">Not built yet — tell me what you need here and I'll add it.</p>
-  </div>
-</div>
-
-<div id="invtab-showroom" class="tab-page" style="display:none">
-  <div class="card">
-    <div class="card-title"><span class="dot dot-blue"></span>Showroom Inventory</div>
-    <p style="font-size:12px;color:var(--muted)">Not built yet — tell me what you need here and I'll add it.</p>
-  </div>
-</div>
-
-</div>
-<!-- /maintab-inventory -->
 
 <div class="app-footer">
   <div class="by-line">Crafted for Gaty Furniture by</div>
@@ -1030,17 +903,13 @@ function switchTab(name) {
 }
 
 const MAIN_TAB_INFO = {
-  cost: { title: 'Cost', subtitle: 'Merge transfer and return files and auto-generate the final file' },  workshop: { title: 'Labor Cost', subtitle: 'Workshop labor cost tracking (دفتر الورشة) — loaded live from the web' },
-  inventory: { title: 'Inventory', subtitle: 'Raw materials, work in process, finished goods, and showroom stock' }
-};
+  cost: { title: 'Cost', subtitle: 'Merge transfer and return files and auto-generate the final file' },  workshop: { title: 'Labor Cost', subtitle: 'Workshop labor cost tracking (دفتر الورشة) — loaded live from the web' },};
 
 function switchMainTab(name) {
   document.getElementById('maintab-cost').style.display = name === 'cost' ? 'block' : 'none';
   document.getElementById('maintab-workshop').style.display = name === 'workshop' ? 'block' : 'none';
-  document.getElementById('maintab-inventory').style.display = name === 'inventory' ? 'block' : 'none';
   document.getElementById('maintabbtn-cost').classList.toggle('active', name === 'cost');
   document.getElementById('maintabbtn-workshop').classList.toggle('active', name === 'workshop');
-  document.getElementById('maintabbtn-inventory').classList.toggle('active', name === 'inventory');
   document.getElementById('app-title').textContent = MAIN_TAB_INFO[name].title;
   document.getElementById('app-subtitle').textContent = MAIN_TAB_INFO[name].subtitle;
 }
@@ -1087,7 +956,7 @@ async function fetchRemoteUsers() {
 // "cost"-level login. Full-access logins leave the normal tab set alone.
 function applyAccessRestrictions() {
   if (state.accessLevel === 'full') return;
-  ['maintabbtn-workshop', 'maintabbtn-inventory'].forEach(id => {
+  ['maintabbtn-workshop'].forEach(id => {
     const btn = document.getElementById(id);
     if (btn) btn.style.display = 'none';
   });
@@ -2166,6 +2035,12 @@ function downloadUncostedCategory(category) {
 // credit). The parent control account (code "2111") is a summary-only
 // block with no real transactions of its own and is excluded from results.
 
+const LEDGER_REF_HEADERS = ['رقم المرجع', 'reference', 'ref'];
+const LEDGER_DESC_HEADERS = ['تعريف', 'اسم الحساب', 'اسم المورد', 'البيان', 'description'];
+const LEDGER_DATE_HEADERS = ['تاريخ العملية', 'التاريخ', 'تاريخ القيد', 'date', 'posting date'];
+const LEDGER_DEBIT_HEADERS = ['مدين', 'debit'];
+const LEDGER_CREDIT_HEADERS = ['دائن', 'credit'];
+
 function loadWipOngoingPatterns() {
   try {
     const raw = localStorage.getItem(WIP_ONGOING_KEY);
@@ -3044,25 +2919,6 @@ function downloadResult() {
       dt.items.add(file);
       input.files = dt.files;
       handleFinalSheet(input);
-    }
-  });
-})();
-
-// Drag and drop for the WIP statement (Inventory > Work In Process) zone
-(() => {
-  const zone = document.getElementById('zone-wip');
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
-  zone.addEventListener('drop', e => {
-    e.preventDefault();
-    zone.classList.remove('drag');
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      const input = document.getElementById('file-wip');
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      input.files = dt.files;
-      handleWipStatement(input);
     }
   });
 })();
