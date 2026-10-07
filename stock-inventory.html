@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en" dir="ltr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Inventory — Gaty Cost</title>
-<script>(function(){var t=localStorage.getItem("gaty_stock_inventory_gate");if(!t||Date.now()-Number(t)>=3600000)window.location.replace("index.html")})();</script>
+<script>(function(){var t=localStorage.getItem("gaty_stock_inventory_gate");if(!t||Date.now()-Number(t)>=3600000)window.location.replace("index.html");else localStorage.setItem("gaty_item_movement_gate",t)})();</script>
 <script src="xlsx.full.min.js"></script><script src="exceljs.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -475,10 +475,14 @@
 </head><body>
 <div class="header" style="margin-bottom:20px"><div><h1>Inventory</h1><p>Raw materials, work in process, finished goods, and showroom stock</p></div><div class="header-right"><a class="btn btn-outline" href="index.html" style="color:white;border-color:#ffffff88">← Gaty Cost</a><div class="badge">Gaty Furniture</div></div></div>
 <div class="tab-nav">
+  <button class="tab-btn active" id="invtabbtn-movement" onclick="switchInvTab('movement')">📊 Item Movement</button>
   <button class="tab-btn" id="invtabbtn-raw" onclick="switchInvTab('raw')">🧱 Raw Materials</button>
-  <button class="tab-btn active" id="invtabbtn-wip" onclick="switchInvTab('wip')">⚙️ Work In Process</button>
+  <button class="tab-btn" id="invtabbtn-wip" onclick="switchInvTab('wip')">⚙️ Work In Process</button>
   <button class="tab-btn" id="invtabbtn-finished" onclick="switchInvTab('finished')">📦 Finished Goods</button>
   <button class="tab-btn" id="invtabbtn-showroom" onclick="switchInvTab('showroom')">🖼️ Showroom</button>
+</div>
+<div id="invtab-movement" class="tab-page">
+  <iframe src="item-movement.html" title="Item Movement report" loading="eager" style="display:block;width:100%;height:1400px;min-height:calc(100vh - 170px);border:0;border-radius:10px;background:#fff;"></iframe>
 </div>
 
 <div id="invtab-raw" class="tab-page" style="display:none">
@@ -488,7 +492,7 @@
   </div>
 </div>
 
-<div id="invtab-wip" class="tab-page">
+<div id="invtab-wip" class="tab-page" style="display:none">
 
   <div class="card" style="margin-bottom:16px">
     <div class="card-title">
@@ -621,6 +625,8 @@ const LEDGER_DESC_HEADERS = ['تعريف', 'اسم الحساب', 'اسم الم
 const LEDGER_DATE_HEADERS = ['تاريخ العملية', 'التاريخ', 'تاريخ القيد', 'date', 'posting date'];
 const LEDGER_DEBIT_HEADERS = ['مدين', 'debit'];
 const LEDGER_CREDIT_HEADERS = ['دائن', 'credit'];function switchInvTab(name) {
+  document.getElementById('invtab-movement').style.display = name === 'movement' ? 'block' : 'none';
+  document.getElementById('invtabbtn-movement').classList.toggle('active', name === 'movement');
   document.getElementById('invtab-raw').style.display = name === 'raw' ? 'block' : 'none';
   document.getElementById('invtab-wip').style.display = name === 'wip' ? 'block' : 'none';
   document.getElementById('invtab-finished').style.display = name === 'finished' ? 'block' : 'none';
