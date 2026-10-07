@@ -630,6 +630,27 @@ const LEDGER_CREDIT_HEADERS = ['دائن', 'credit'];function switchInvTab(name)
   document.getElementById('invtabbtn-finished').classList.toggle('active', name === 'finished');
   document.getElementById('invtabbtn-showroom').classList.toggle('active', name === 'showroom');
 }
+function parseLedgerDate(v) {
+  if (v instanceof Date && !isNaN(v)) return v;
+  if (typeof v === 'number') {
+    const epoch = Date.UTC(1899, 11, 30);
+    return new Date(epoch + v * 86400000);
+  }
+  if (typeof v === 'string') {
+    const s = v.trim();
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (m) {
+      let [, d, mo, y] = m;
+      if (y.length === 2) y = '20' + y;
+      return new Date(Date.UTC(+y, +mo - 1, +d));
+    }
+    const parsed = new Date(s);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return null;
+}
+
+
 function loadWipOngoingPatterns() {
   try {
     const raw = localStorage.getItem(WIP_ONGOING_KEY);
