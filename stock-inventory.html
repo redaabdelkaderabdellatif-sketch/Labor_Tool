@@ -510,9 +510,9 @@
   </div>
 
   <div class="card" id="wip-ongoing-card" style="margin-bottom:16px; display:none">
-    <div class="card-title">⚙️ 2026 Ongoing Patterns (confirmed)</div>
+    <div class="card-title">⚙️ 2026 Ongoing Patterns (configure matches)</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-      A row stays in the ongoing 2026 ledger if its description contains any one of these patterns — checked before the settlement categories below. Edit, add, or remove freely; saved to this device.
+      A row stays in the ongoing 2026 ledger when its description matches one of the patterns. Add the confirmed match text; entries that match no category remain unclassified. Settings are saved to this device.
     </p>
     <div class="preview-table-wrap">
       <table>
@@ -529,7 +529,7 @@
       <span id="wip-last-updated" style="font-size:11px; font-weight:600; color:var(--muted);"></span>
     </div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-      Anything that doesn't match a 2026 ongoing pattern above is a one-off entry clearing an old 2025 balance, grouped into these 4 categories — same layout as your reference template. <strong>The label and match text are my best guess from analyzing your example files — please review and correct them if needed.</strong> Checked top row first; anything matching none of the 4 is listed individually below ("outside classification"). Both the target Value and the match text are saved to this device and stay exactly as you set them.
+      Set the four settlement labels, match text, and target values from the approved 2025 plan. The first matching row is used. Entries that match none of the categories appear below for manual classification. Settings are saved to this device.
     </p>
     <div class="preview-table-wrap">
       <table>
@@ -605,7 +605,16 @@
 
 <div class="signature" style="text-align:center;margin:20px;color:var(--muted)">Reda Alshrkawy</div>
 <script>const state={};
-const WIP_OPID_HEADERS = ['رقم العملية', 'operation no', 'transaction no'];function findColumn(headerRow, candidates) {
+const WIP_OPID_HEADERS = ['رقم العملية', 'operation no', 'transaction no'];
+const WIP_ONGOING_KEY = 'gati_wip_ongoing_patterns_v1';
+const WIP_ONGOING_DEFAULTS = ['', '', '', ''];
+const WIP_CATEGORIES_KEY = 'gati_wip_categories_v1';
+const WIP_CATEGORY_DEFAULTS = [
+  { label: 'فئة تسوية 1', match: '', value: null },
+  { label: 'فئة تسوية 2', match: '', value: null },
+  { label: 'فئة تسوية 3', match: '', value: null },
+  { label: 'فئة تسوية 4', match: '', value: null }
+];function findColumn(headerRow, candidates) {
   // Pass 1: exact match, checked in candidate priority order
   for (const cand of candidates) {
     const idx = headerRow.findIndex(cell => String(cell || '').trim().toLowerCase() === cand.toLowerCase());
