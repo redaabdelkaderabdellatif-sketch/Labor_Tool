@@ -485,7 +485,7 @@
     color: var(--primary);
   }
 </style>
-</head>
+<style>#maintabbtn-cost,#maintab-cost{display:none!important}</style>\n</head>
 <body>
 
 <div id="app-content" style="display:block">
@@ -503,7 +503,7 @@
 
 <div class="main-tab-nav">
   <button class="main-tab-btn active" id="maintabbtn-cost" onclick="switchMainTab('cost')">💰 Cost</button>
-  <button class="main-tab-btn" id="maintabbtn-workshop" onclick="switchMainTab('workshop')">🕒 Labor Cost</button>
+  <button class="main-tab-btn active" id="maintabbtn-workshop" onclick="switchMainTab('workshop')">🕒 Labor Cost</button>
 </div>
 
 <div id="maintab-cost" class="main-tab-page">
@@ -862,7 +862,7 @@
 
 
 
-<div id="maintab-workshop" class="main-tab-page" style="display:none">
+<div id="maintab-workshop" class="main-tab-page" style="display:block">
   <div class="card" style="margin-bottom:12px;">
     <div class="card-title" style="margin-bottom:8px;">
       <span class="dot dot-blue"></span>
@@ -906,6 +906,7 @@ const MAIN_TAB_INFO = {
   cost: { title: 'Cost', subtitle: 'Merge transfer and return files and auto-generate the final file' },  workshop: { title: 'Labor Cost', subtitle: 'Workshop labor cost tracking (دفتر الورشة) — loaded live from the web' },};
 
 function switchMainTab(name) {
+  if (name === 'cost') { window.location.href = 'transfer-cost.html'; return; }
   document.getElementById('maintab-cost').style.display = name === 'cost' ? 'block' : 'none';
   document.getElementById('maintab-workshop').style.display = name === 'workshop' ? 'block' : 'none';
   document.getElementById('maintabbtn-cost').classList.toggle('active', name === 'cost');
@@ -949,7 +950,7 @@ function applyAccessRestrictions() {
     const btn = document.getElementById(id);
     if (btn) btn.style.display = 'none';
   });
-  switchMainTab('cost');
+  switchMainTab('workshop');
 }
 
 async function checkPassword() {
