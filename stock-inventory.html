@@ -1,0 +1,1126 @@
+<!DOCTYPE html><html lang="en" dir="ltr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Inventory — Gaty Cost</title>
+<script>(function(){var t=localStorage.getItem("gaty_stock_inventory_gate");if(!t||Date.now()-Number(t)>=3600000)window.location.replace("index.html")})();</script>
+<script src="xlsx.full.min.js"></script><script src="exceljs.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #714B67;
+    --primary-dark: #5B3B54;
+    --primary-light: #F3ECF2;
+    --bg: #F7F7F9;
+    --surface: #FFFFFF;
+    --border: #E3E1E6;
+    --text: #23212B;
+    --muted: #726C7A;
+    --accent: #714B67;
+    --accent2: #8B5F80;
+    --green: #1E8E5A;
+    --green-light: #E8F5EE;
+    --red: #D64550;
+    --red-light: #FBEAEC;
+    --orange: #DB8A2C;
+    --yellow: #FDF3E4;
+    --radius: 10px;
+    --shadow: 0 2px 10px rgba(35,33,43,0.08);
+  }
+
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px;
+    font-size: 14px;
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    padding: 20px 28px;
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header p { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .badge {
+    background: rgba(255,255,255,0.16);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .signature-badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: default;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-blue  { background: var(--primary); }
+  .dot-red   { background: var(--red); }
+  .dot-green { background: var(--green); }
+
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--primary); background: var(--primary-light); }
+  .upload-zone.loaded { border-color: var(--green); border-style: solid; background: var(--green-light); }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 28px; margin-bottom: 8px; }
+  .upload-label { font-size: 13px; color: var(--muted); }
+  .upload-label strong { color: var(--text); }
+  .file-name {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--green);
+    font-weight: 600;
+    display: none;
+  }
+  .file-name.show { display: block; }
+
+  .stats-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .stat-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .stat-chip span { font-weight: 700; color: var(--text); }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+  .btn-success {
+    background: var(--green);
+    color: white;
+    margin-top: 12px;
+  }
+  .btn-success:hover { background: #17703F; }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .btn-row .btn { margin-top: 0; }
+  .btn-outline {
+    background: var(--surface);
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+  }
+  .btn-outline:hover { background: var(--primary-light); }
+  .cell-input {
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--surface);
+    color: var(--text);
+  }
+  .cell-input:focus { border-color: var(--primary); outline: none; }
+
+  .log-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    font-size: 12px;
+    line-height: 1.8;
+    min-height: 80px;
+    max-height: 200px;
+    overflow-y: auto;
+    direction: ltr;
+    color: var(--muted);
+    font-family: 'Courier New', monospace;
+  }
+  .log-ok   { color: var(--green); }
+  .log-warn { color: var(--orange); }
+  .log-err  { color: var(--red); }
+  .log-info { color: var(--accent2); }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--green);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 16px;
+    box-shadow: var(--shadow);
+    display: none;
+  }
+  .result-card.show { display: block; }
+  .result-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 16px;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
+  .summary-box {
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 14px;
+    text-align: center;
+  }
+  .summary-box .num { font-size: 22px; font-weight: 800; color: var(--primary); }
+  .summary-box .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .preview-table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    min-width: 700px;
+  }
+  th {
+    background: var(--bg);
+    color: var(--muted);
+    padding: 10px 10px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.2px;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  tr:hover td { background: var(--primary-light); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .tag-t { background: var(--primary-light); color: var(--primary); }
+  .tag-r { background: var(--red-light); color: var(--red); }
+
+  .ref-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 30;
+    display: none;
+  }
+  .ref-suggestions.show { display: block; }
+  .ref-suggestion-item {
+    padding: 9px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+  }
+  .ref-suggestion-item:last-child { border-bottom: none; }
+  .ref-suggestion-item:hover { background: var(--primary-light); }
+  .ref-suggestion-empty {
+    padding: 9px 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .ref-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .ref-chip button {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    padding: 0;
+  }
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 8px 0;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  .tab-nav {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    padding: 10px 16px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: color .15s, background .15s;
+  }
+  .tab-btn:hover { color: var(--text); background: var(--bg); }
+  .tab-btn.active {
+    color: #fff;
+    background: var(--primary);
+    box-shadow: 0 2px 6px rgba(113,75,103,0.35);
+  }
+
+  .main-tab-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .main-tab-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px 22px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 10px;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .main-tab-btn:hover { color: var(--text); border-color: var(--primary); }
+  .main-tab-btn.active {
+    color: #fff;
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(113,75,103,0.35);
+  }
+  .main-tab-page { display: block; }
+
+  .lock-overlay {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+  }
+  .lock-box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 340px;
+    box-shadow: 0 8px 30px rgba(35,33,43,0.3);
+    text-align: center;
+  }
+  .lock-box .lock-icon { font-size: 32px; margin-bottom: 10px; }
+  .lock-box h2 { font-size: 16px; color: var(--primary); margin-bottom: 6px; }
+  .lock-box p { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+  .lock-box input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-align: center;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .lock-box .lock-err {
+    color: var(--red);
+    font-size: 12px;
+    margin-top: 4px;
+    min-height: 16px;
+    display: none;
+  }
+  .lock-box .lock-err.show { display: block; }
+
+  .app-footer {
+    text-align: center;
+    padding: 32px 0 12px;
+  }
+  .app-footer .by-line {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .app-footer .signature {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.3px;
+    color: var(--primary);
+  }
+</style>
+</head><body>
+<div class="header" style="margin-bottom:20px"><div><h1>Inventory</h1><p>Raw materials, work in process, finished goods, and showroom stock</p></div><div class="header-right"><a class="btn btn-outline" href="index.html" style="color:white;border-color:#ffffff88">← Gaty Cost</a><div class="badge">Gaty Furniture</div></div></div>
+<div class="tab-nav">
+  <button class="tab-btn" id="invtabbtn-raw" onclick="switchInvTab('raw')">🧱 Raw Materials</button>
+  <button class="tab-btn active" id="invtabbtn-wip" onclick="switchInvTab('wip')">⚙️ Work In Process</button>
+  <button class="tab-btn" id="invtabbtn-finished" onclick="switchInvTab('finished')">📦 Finished Goods</button>
+  <button class="tab-btn" id="invtabbtn-showroom" onclick="switchInvTab('showroom')">🖼️ Showroom</button>
+</div>
+
+<div id="invtab-raw" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-title"><span class="dot dot-blue"></span>Raw Materials Inventory</div>
+    <p style="font-size:12px;color:var(--muted)">Not built yet — tell me what you need here and I'll add it.</p>
+  </div>
+</div>
+
+<div id="invtab-wip" class="tab-page">
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">
+      <span class="dot dot-blue"></span>
+      WIP Account Statement (كشف حساب)
+    </div>
+    <div class="upload-zone" id="zone-wip">
+      <input type="file" id="file-wip" accept=".xlsx,.xls" onchange="handleWipStatement(this)">
+      <div class="upload-icon">📄</div>
+      <div class="upload-label"><strong>Drag & drop</strong> or click to choose<br>The combined account statement for the WIP account (111200003 — مخزون الانتاج تحت التشغيل)</div>
+      <div class="file-name" id="fname-wip"></div>
+    </div>
+    <div class="stats-row" id="stats-wip"></div>
+    <div class="log-box" id="wip-log" style="margin-top:12px">Waiting for the statement file...</div>
+  </div>
+
+  <div class="card" id="wip-ongoing-card" style="margin-bottom:16px; display:none">
+    <div class="card-title">⚙️ 2026 Ongoing Patterns (confirmed)</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+      A row stays in the ongoing 2026 ledger if its description contains any one of these patterns — checked before the settlement categories below. Edit, add, or remove freely; saved to this device.
+    </p>
+    <div class="preview-table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Match text (in description)</th><th></th></tr></thead>
+        <tbody id="wip-ongoing-body"></tbody>
+      </table>
+    </div>
+    <button class="btn btn-outline" style="width:auto;padding:8px 16px;margin-top:10px" onclick="addWipOngoingPattern()">+ Add pattern</button>
+  </div>
+
+  <div class="card" id="wip-categories-card" style="margin-bottom:16px; display:none">
+    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+      <span>📋 ملخص رصيد 2025 (2025 Settlement Categories)</span>
+      <span id="wip-last-updated" style="font-size:11px; font-weight:600; color:var(--muted);"></span>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+      Anything that doesn't match a 2026 ongoing pattern above is a one-off entry clearing an old 2025 balance, grouped into these 4 categories — same layout as your reference template. <strong>The label and match text are my best guess from analyzing your example files — please review and correct them if needed.</strong> Checked top row first; anything matching none of the 4 is listed individually below ("outside classification"). Both the target Value and the match text are saved to this device and stay exactly as you set them.
+    </p>
+    <div class="preview-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:260px">الجرد الفعلي وما يجب ان يكون</th>
+            <th style="min-width:200px">Match text (in description)</th>
+            <th>القيمة (Value)</th>
+            <th>ما تم تسجيلة (Posted)</th>
+            <th>الرصيد (Remaining)</th>
+          </tr>
+        </thead>
+        <tbody id="wip-categories-body"></tbody>
+        <tfoot id="wip-categories-foot"></tfoot>
+      </table>
+    </div>
+    <div id="wip-opening-balance-note" style="font-size:11px; color:var(--muted); margin-top:8px;"></div>
+  </div>
+
+  <div class="card" id="wip-outside-card" style="margin-bottom:16px; display:none">
+    <div class="card-title">🔍 قيود برا التصنيف (Entries Outside Classification)</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+      Every individual row that matched none of the 4 categories above — the one thing I'd flag for a closer look is <strong>"المواد المستخدمة داخليا"</strong> (materials used internally / AFTER COST / REWORK), highlighted below since it's genuinely ambiguous whether it belongs in 2026 or 2025.
+    </p>
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">قيود برا التصنيف — مدين (Debit)</div>
+    <div class="preview-table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Reference</th><th>Description</th><th>Amount</th><th></th></tr></thead>
+        <tbody id="wip-outside-debit-body"></tbody>
+      </table>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin:14px 0 6px">قيود برا التصنيف — دائن (Credit)</div>
+    <div class="preview-table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Reference</th><th>Description</th><th>Amount</th><th></th></tr></thead>
+        <tbody id="wip-outside-credit-body"></tbody>
+      </table>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:24px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-size:13px;">
+      <div>المتبقي (Remaining after these): <strong id="wip-outside-remaining">0</strong></div>
+    </div>
+  </div>
+
+  <div class="card" id="wip-result-card" style="margin-bottom:16px; display:none">
+    <div class="card-title">📊 Split Result</div>
+    <div class="summary-grid">
+      <div class="summary-box"><div class="num" id="wip-2026-count">0</div><div class="lbl">2026 Rows (ongoing)</div></div>
+      <div class="summary-box"><div class="num" id="wip-2025-count">0</div><div class="lbl">2025 Rows (settlement)</div></div>
+      <div class="summary-box"><div class="num" id="wip-2025-remaining">0</div><div class="lbl">Total 2025 Remaining</div></div>
+      <div class="summary-box"><div class="num" id="wip-unclassified-count">0</div><div class="lbl">Outside Classification</div></div>
+    </div>
+    <div id="wip-gate-message" style="display:none; font-size:12px; color:var(--red); font-weight:600; margin-bottom:8px;"></div>
+    <button class="btn btn-success" id="wip-download-btn" onclick="downloadWipSplit()">⬇️ Download Split Workbook (.xlsx)</button>
+  </div>
+
+</div>
+
+<div id="invtab-finished" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-title"><span class="dot dot-blue"></span>Finished Goods Inventory</div>
+    <p style="font-size:12px;color:var(--muted)">Not built yet — tell me what you need here and I'll add it.</p>
+  </div>
+</div>
+
+<div id="invtab-showroom" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-title"><span class="dot dot-blue"></span>Showroom Inventory</div>
+    <p style="font-size:12px;color:var(--muted)">Not built yet — tell me what you need here and I'll add it.</p>
+  </div>
+</div>
+
+</div>
+
+<div class="signature" style="text-align:center;margin:20px;color:var(--muted)">Reda Alshrkawy</div>
+<script>const state={};function findColumn(headerRow, candidates) {
+  // Pass 1: exact match, checked in candidate priority order
+  for (const cand of candidates) {
+    const idx = headerRow.findIndex(cell => String(cell || '').trim().toLowerCase() === cand.toLowerCase());
+    if (idx !== -1) return idx;
+  }
+  // Pass 2: substring match, checked in candidate priority order
+  for (const cand of candidates) {
+    const idx = headerRow.findIndex(cell => {
+      const c = String(cell || '').trim().toLowerCase();
+      return c && c.includes(cand.toLowerCase());
+    });
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+const LEDGER_REF_HEADERS = ['رقم المرجع', 'reference', 'ref'];
+const LEDGER_DESC_HEADERS = ['تعريف', 'اسم الحساب', 'اسم المورد', 'البيان', 'description'];
+const LEDGER_DATE_HEADERS = ['تاريخ العملية', 'التاريخ', 'تاريخ القيد', 'date', 'posting date'];
+const LEDGER_DEBIT_HEADERS = ['مدين', 'debit'];
+const LEDGER_CREDIT_HEADERS = ['دائن', 'credit'];function switchInvTab(name) {
+  document.getElementById('invtab-raw').style.display = name === 'raw' ? 'block' : 'none';
+  document.getElementById('invtab-wip').style.display = name === 'wip' ? 'block' : 'none';
+  document.getElementById('invtab-finished').style.display = name === 'finished' ? 'block' : 'none';
+  document.getElementById('invtab-showroom').style.display = name === 'showroom' ? 'block' : 'none';
+  document.getElementById('invtabbtn-raw').classList.toggle('active', name === 'raw');
+  document.getElementById('invtabbtn-wip').classList.toggle('active', name === 'wip');
+  document.getElementById('invtabbtn-finished').classList.toggle('active', name === 'finished');
+  document.getElementById('invtabbtn-showroom').classList.toggle('active', name === 'showroom');
+}
+function loadWipOngoingPatterns() {
+  try {
+    const raw = localStorage.getItem(WIP_ONGOING_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length >= 4) return parsed;
+    }
+  } catch (e) { /* ignore */ }
+  return WIP_ONGOING_DEFAULTS.slice();
+}
+
+function saveWipOngoingPatterns(patterns) {
+  try { localStorage.setItem(WIP_ONGOING_KEY, JSON.stringify(patterns)); } catch (e) { /* private mode — ignore */ }
+}
+
+state.wipOngoingPatterns = loadWipOngoingPatterns();
+
+function loadWipCategories() {
+  try {
+    const raw = localStorage.getItem(WIP_CATEGORIES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length === 4) return parsed;
+    }
+  } catch (e) { /* ignore */ }
+  return WIP_CATEGORY_DEFAULTS.map(c => ({ label: c.label, match: c.match, value: c.value }));
+}
+
+function saveWipCategories(cats) {
+  try { localStorage.setItem(WIP_CATEGORIES_KEY, JSON.stringify(cats)); } catch (e) { /* private mode — ignore */ }
+}
+
+state.wipCategories = loadWipCategories();
+state.wipRows = null;
+
+const WIP_MANUAL_OVERRIDES_KEY = 'gati_wip_manual_overrides_v1';
+const WIP_LAST_UPDATED_KEY = 'gati_wip_last_updated_v1';
+
+function loadWipManualOverrides() {
+  try {
+    const raw = localStorage.getItem(WIP_MANUAL_OVERRIDES_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* ignore */ }
+  return {};
+}
+
+function saveWipManualOverrides(overrides) {
+  try { localStorage.setItem(WIP_MANUAL_OVERRIDES_KEY, JSON.stringify(overrides)); } catch (e) { /* private mode — ignore */ }
+}
+
+function loadWipLastUpdated() {
+  try { return localStorage.getItem(WIP_LAST_UPDATED_KEY) || null; } catch (e) { return null; }
+}
+
+function saveWipLastUpdated(dateStr) {
+  try { localStorage.setItem(WIP_LAST_UPDATED_KEY, dateStr); } catch (e) { /* private mode — ignore */ }
+}
+
+state.wipManualOverrides = loadWipManualOverrides();
+state.wipLastUpdated = loadWipLastUpdated();
+
+function wipLog(msg, type = '') {
+  const el = document.getElementById('wip-log');
+  const line = document.createElement('div');
+  line.className = type ? `log-${type}` : '';
+  line.textContent = `[${new Date().toLocaleTimeString('en-US')}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+const WIP_OPID_HEADERS = ['رقم العملية', 'operation no', 'transaction no'];
+
+function findWipHeaderRow(raw) {
+  for (let i = 0; i < Math.min(20, raw.length); i++) {
+    const row = raw[i];
+    if (!row) continue;
+    const dateCol = findColumn(row, LEDGER_DATE_HEADERS);
+    const debitCol = findColumn(row, LEDGER_DEBIT_HEADERS);
+    const creditCol = findColumn(row, LEDGER_CREDIT_HEADERS);
+    const descCol = findColumn(row, LEDGER_DESC_HEADERS);
+    const refCol = findColumn(row, LEDGER_REF_HEADERS);
+    const opIdCol = findColumn(row, WIP_OPID_HEADERS);
+    if (dateCol === -1 || debitCol === -1 || creditCol === -1 || descCol === -1) continue;
+    return { headerRowIdx: i, dateCol, debitCol, creditCol, descCol, refCol, opIdCol };
+  }
+  return null;
+}
+
+// Every dated row with a non-zero debit or credit is a real entry — this
+// naturally includes the "الرصيد الافتتاحي" (opening balance) line and
+// excludes the account-header line (no date) and the "إجمالي العملية" /
+// "الرصيد الختامى" summary lines at the end (explicitly skipped, since —
+// like the supplier ledger — they'd otherwise double-count the total).
+function parseWipStatement(raw) {
+  const hdr = findWipHeaderRow(raw);
+  if (!hdr) return null;
+  const { headerRowIdx, dateCol, debitCol, creditCol, descCol, refCol, opIdCol } = hdr;
+
+  const rows = [];
+  for (let i = headerRowIdx + 1; i < raw.length; i++) {
+    const row = raw[i];
+    if (!row || row.every(v => v === null || v === undefined || v === '')) continue;
+
+    const descVal = String(row[descCol] ?? '').trim();
+    if (descVal.includes('الرصيد الختام') || descVal.includes('جمالي العملية')) continue;
+
+    const dateVal = parseLedgerDate(row[dateCol]);
+    const debitVal = parseFloat(String(row[debitCol] ?? '0').replace(/,/g, '')) || 0;
+    const creditVal = parseFloat(String(row[creditCol] ?? '0').replace(/,/g, '')) || 0;
+    if (!dateVal || (debitVal === 0 && creditVal === 0)) continue;
+
+    const refVal = refCol !== -1 ? String(row[refCol] ?? '').trim() : '';
+    const opIdRaw = opIdCol !== -1 ? String(row[opIdCol] ?? '').trim() : '';
+    // A stable per-entry key for persisted manual classification: the
+    // transaction's own operation number when there is one (regular
+    // entries), or a composite of its fields when there isn't (e.g. the
+    // opening-balance line, which has no operation number).
+    const opId = opIdRaw || `composite:${dateVal.toISOString()}|${refVal}|${descVal}|${debitVal}|${creditVal}`;
+
+    rows.push({ date: dateVal, debit: debitVal, credit: creditVal, desc: descVal, ref: refVal, opId });
+  }
+  return rows;
+}
+
+// Manual overrides (a person explicitly assigning a specific entry to a
+// category, persisted by that entry's own opId) always win — they exist
+// precisely to handle entries the automatic pattern rules can't place.
+// Otherwise: -1 = stays in the ongoing 2026 ledger (matches one of the 4
+// confirmed patterns), 0-3 = a settlement category match, -2 = matches
+// neither and needs a person to classify it before the file can be
+// downloaded.
+// The opening balance represents the combined total of the 4 Plan target
+// values themselves (not an actual cost posting against any one of them),
+// so its classification is fixed and permanent — checked before anything
+// else, including manual overrides, and excluded from both the "2026
+// ongoing" and "2025 settlement" buckets (categoryIndex -3).
+const WIP_OPENING_BALANCE_PATTERNS = ['الرصيد الافتتاحي', 'الرصيد الأفتتاحي'];
+
+function classifyWipRow(desc, opId, ongoingPatterns, categories, manualOverrides) {
+  for (const pattern of WIP_OPENING_BALANCE_PATTERNS) {
+    if (desc.includes(pattern)) return -3;
+  }
+  if (manualOverrides && Object.prototype.hasOwnProperty.call(manualOverrides, opId)) {
+    return manualOverrides[opId];
+  }
+  for (const pattern of ongoingPatterns) {
+    if (pattern && desc.includes(pattern)) return -1;
+  }
+  for (let i = 0; i < categories.length; i++) {
+    const kw = (categories[i].match || '').trim();
+    if (kw && desc.includes(kw)) return i;
+  }
+  return -2;
+}
+
+function reclassifyWipRows() {
+  if (!state.wipRows) return;
+  state.wipRows.forEach(r => {
+    r.categoryIndex = classifyWipRow(r.desc, r.opId, state.wipOngoingPatterns, state.wipCategories, state.wipManualOverrides);
+    r.isManual = Object.prototype.hasOwnProperty.call(state.wipManualOverrides, r.opId);
+  });
+  renderWipCategories();
+  renderWipOutside();
+  renderWipResult();
+}
+
+function handleWipStatement(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+      const rows = parseWipStatement(raw);
+
+      document.getElementById('wip-log').innerHTML = '';
+
+      if (!rows || rows.length === 0) {
+        document.getElementById('wip-categories-card').style.display = 'none';
+        document.getElementById('wip-outside-card').style.display = 'none';
+        document.getElementById('wip-result-card').style.display = 'none';
+        wipLog("Couldn't find date/description/debit/credit columns in this file — check the format", 'err');
+        return;
+      }
+
+      state.wipRows = rows;
+      state.wipLastUpdated = new Date().toISOString().split('T')[0];
+      saveWipLastUpdated(state.wipLastUpdated);
+      document.getElementById('fname-wip').textContent = '✓ ' + file.name;
+      document.getElementById('fname-wip').classList.add('show');
+      document.getElementById('zone-wip').classList.add('loaded');
+      document.getElementById('stats-wip').innerHTML = `<div class="stat-chip">Rows: <span>${rows.length}</span></div>`;
+      wipLog(`Loaded ${file.name} — ${rows.length} row(s)`, 'ok');
+
+      document.getElementById('wip-categories-card').style.display = 'block';
+      document.getElementById('wip-ongoing-card').style.display = 'block';
+      renderWipOngoingPatterns();
+      reclassifyWipRows();
+    } catch (err) {
+      document.getElementById('wip-log').innerHTML = '';
+      wipLog(`Error reading file: ${err.message}`, 'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function onWipOngoingPatternChange(index, value) {
+  state.wipOngoingPatterns[index] = value;
+  saveWipOngoingPatterns(state.wipOngoingPatterns);
+  reclassifyWipRows();
+}
+
+function renderWipOngoingPatterns() {
+  const body = document.getElementById('wip-ongoing-body');
+  body.innerHTML = state.wipOngoingPatterns.map((pattern, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><input type="text" class="cell-input" style="width:100%" value="${pattern.replace(/"/g, '&quot;')}" onchange="onWipOngoingPatternChange(${i}, this.value)"></td>
+    </tr>`).join('');
+}
+
+function onWipCategoryFieldChange(index, field, value) {
+  if (field === 'value') {
+    const num = parseFloat(value);
+    state.wipCategories[index].value = (value === '' || isNaN(num)) ? null : num;
+  } else {
+    state.wipCategories[index][field] = value;
+  }
+  saveWipCategories(state.wipCategories);
+  reclassifyWipRows();
+}
+
+function renderWipCategories() {
+  const lastUpdatedEl = document.getElementById('wip-last-updated');
+  if (lastUpdatedEl) lastUpdatedEl.textContent = state.wipLastUpdated ? `Last updated: ${state.wipLastUpdated}` : '';
+
+  const openingBalanceNote = document.getElementById('wip-opening-balance-note');
+  if (openingBalanceNote && state.wipRows) {
+    const opening = state.wipRows.filter(r => r.categoryIndex === -3);
+    const openingNet = opening.reduce((s, r) => s + (r.credit - r.debit), 0);
+    openingBalanceNote.textContent = opening.length
+      ? `ℹ️ Opening balance (${Math.abs(openingNet).toLocaleString('en-US', { minimumFractionDigits: 2 })}) is fixed and excluded here — it represents the combined Plan totals themselves, not a posting against any one category.`
+      : '';
+  }
+
+  const body = document.getElementById('wip-categories-body');
+  let totalValue = 0, totalRemaining = 0, anyValue = false;
+  body.innerHTML = state.wipCategories.map((cat, i) => {
+    const posted = state.wipRows
+      ? state.wipRows.filter(r => r.categoryIndex === i).reduce((s, r) => s + (r.credit - r.debit), 0)
+      : 0;
+    const remaining = typeof cat.value === 'number' ? cat.value - posted : null;
+    if (typeof cat.value === 'number') { totalValue += cat.value; anyValue = true; }
+    if (remaining !== null) totalRemaining += remaining;
+    return `
+    <tr>
+      <td><input type="text" class="cell-input" style="width:100%;text-align:right" value="${cat.label.replace(/"/g, '&quot;')}" onchange="onWipCategoryFieldChange(${i},'label',this.value)"></td>
+      <td><input type="text" class="cell-input" style="width:100%" value="${cat.match.replace(/"/g, '&quot;')}" onchange="onWipCategoryFieldChange(${i},'match',this.value)"></td>
+      <td><input type="number" class="cell-input" placeholder="target value" value="${cat.value !== null ? cat.value : ''}" onchange="onWipCategoryFieldChange(${i},'value',this.value)"></td>
+      <td>${posted.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+      <td style="${remaining !== null && remaining > 0.005 ? 'color:var(--orange);font-weight:700' : ''}">${remaining !== null ? remaining.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('wip-categories-foot').innerHTML = `
+    <tr style="font-weight:700; background:var(--bg)">
+      <td>اجمالي التسويات (Total)</td>
+      <td></td>
+      <td>${anyValue ? totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</td>
+      <td></td>
+      <td>${anyValue ? totalRemaining.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</td>
+    </tr>`;
+}
+
+// "المواد المستخدمة داخليا" (materials used internally / AFTER COST /
+// REWORK) is genuinely ambiguous — it's neither a confirmed 2026 pattern
+// nor a clear match for any of the 4 settlement categories — so it's
+// called out with its own highlight and label rather than blending in with
+// other outside-classification rows.
+function isQuestionableWipRow(desc) {
+  return desc.includes('المواد المستخدمة داخليا') || desc.includes('AFTER COST') || desc.includes('REWORK');
+}
+
+function wipCategoryRemaining(i) {
+  const cat = state.wipCategories[i];
+  if (typeof cat.value !== 'number') return null;
+  const posted = state.wipRows.filter(r => r.categoryIndex === i).reduce((s, r) => s + (r.credit - r.debit), 0);
+  return cat.value - posted;
+}
+
+function onWipManualClassify(opId, value) {
+  if (value === '') {
+    delete state.wipManualOverrides[opId];
+  } else {
+    state.wipManualOverrides[opId] = parseInt(value, 10);
+  }
+  saveWipManualOverrides(state.wipManualOverrides);
+  reclassifyWipRows();
+}
+
+function escapeForOnchangeAttr(s) {
+  return String(s)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function renderWipOutsideRow(r) {
+  const questionable = isQuestionableWipRow(r.desc);
+  const rowStyle = questionable ? ' style="background:var(--yellow)"' : '';
+  const flag = questionable ? ' <span class="tag" style="background:var(--orange);color:#fff;margin-inline-start:6px">Unclassified</span>' : '';
+  const amount = r.debit > 0 ? r.debit : r.credit;
+
+  const options = state.wipCategories.map((cat, i) => {
+    const remaining = wipCategoryRemaining(i);
+    const remainingTxt = remaining !== null ? remaining.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—';
+    return `<option value="${i}">${cat.label} — Remaining: ${remainingTxt}</option>`;
+  }).join('');
+
+  return `
+    <tr${rowStyle}>
+      <td>${r.date.toISOString().slice(0, 10)}</td>
+      <td>${r.ref}</td>
+      <td style="max-width:360px;white-space:normal">${r.desc}${flag}</td>
+      <td>${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+      <td>
+        <select class="cell-input" style="width:100%" onchange="onWipManualClassify('${escapeForOnchangeAttr(r.opId)}', this.value)">
+          <option value="">-- Classify (required) --</option>
+          ${options}
+        </select>
+      </td>
+    </tr>`;
+}
+
+function renderWipOutside() {
+  if (!state.wipRows) return;
+  const outside = state.wipRows.filter(r => r.categoryIndex === -2).sort((a, b) => a.date - b.date);
+  const debitRows = outside.filter(r => r.debit > 0);
+  const creditRows = outside.filter(r => r.credit > 0);
+
+  document.getElementById('wip-outside-debit-body').innerHTML = debitRows.length
+    ? debitRows.map(renderWipOutsideRow).join('')
+    : `<tr><td colspan="5" style="color:var(--muted)">None</td></tr>`;
+  document.getElementById('wip-outside-credit-body').innerHTML = creditRows.length
+    ? creditRows.map(renderWipOutsideRow).join('')
+    : `<tr><td colspan="5" style="color:var(--muted)">None</td></tr>`;
+
+  // Total 2025 Remaining (from the category summary) minus the net effect
+  // of everything now individually listed here — what's left after you
+  // account for every outside-classification entry by name.
+  const totalRemaining = state.wipCategories.reduce((sum, cat, i) => {
+    if (typeof cat.value !== 'number') return sum;
+    const posted = state.wipRows.filter(r => r.categoryIndex === i).reduce((s, r) => s + (r.credit - r.debit), 0);
+    return sum + (cat.value - posted);
+  }, 0);
+  const outsideNet = outside.reduce((s, r) => s + (r.credit - r.debit), 0);
+  const remainder = totalRemaining - outsideNet;
+  document.getElementById('wip-outside-remaining').textContent = remainder.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+  document.getElementById('wip-outside-card').style.display = 'block';
+}
+
+function renderWipResult() {
+  if (!state.wipRows) return;
+  const count2026 = state.wipRows.filter(r => r.categoryIndex === -1).length;
+  const count2025 = state.wipRows.filter(r => r.categoryIndex >= 0).length;
+  const countUnclassified = state.wipRows.filter(r => r.categoryIndex === -2).length;
+  const totalRemaining = state.wipCategories.reduce((sum, cat, i) => {
+    if (typeof cat.value !== 'number') return sum;
+    const posted = state.wipRows.filter(r => r.categoryIndex === i).reduce((s, r) => s + (r.credit - r.debit), 0);
+    return sum + (cat.value - posted);
+  }, 0);
+
+  document.getElementById('wip-2026-count').textContent = count2026;
+  document.getElementById('wip-2025-count').textContent = count2025;
+  document.getElementById('wip-2025-remaining').textContent = totalRemaining.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  document.getElementById('wip-unclassified-count').textContent = countUnclassified;
+  document.getElementById('wip-result-card').style.display = 'block';
+
+  // Gate: the file can't be downloaded while any entry is still waiting on
+  // a person to classify it — otherwise the exported 2025 summary would be
+  // silently incomplete.
+  const btn = document.getElementById('wip-download-btn');
+  const gateMsg = document.getElementById('wip-gate-message');
+  if (countUnclassified > 0) {
+    btn.disabled = true;
+    gateMsg.style.display = 'block';
+    gateMsg.textContent = `⚠️ Classify ${countUnclassified} entr${countUnclassified === 1 ? 'y' : 'ies'} in "Entries Outside Classification" above before downloading.`;
+  } else {
+    btn.disabled = false;
+    gateMsg.style.display = 'none';
+  }
+}
+
+async function downloadWipSplit() {
+  if (!state.wipRows) return;
+
+  const stillUnclassified = state.wipRows.filter(r => r.categoryIndex === -2).length;
+  if (stillUnclassified > 0) {
+    wipLog(`Can't download — ${stillUnclassified} entr${stillUnclassified === 1 ? 'y' : 'ies'} still need${stillUnclassified === 1 ? 's' : ''} classification in "Entries Outside Classification".`, 'err');
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+
+  // --- Sheet 1: 2026 ongoing ledger ---
+  const ongoing = state.wipRows.filter(r => r.categoryIndex === -1).sort((a, b) => a.date - b.date);
+  const sheet1 = workbook.addWorksheet('2026');
+  sheet1.addRow(['Date', 'Reference', 'Description', 'Debit', 'Credit', 'Running Balance']).font = { bold: true };
+  let running = 0;
+  ongoing.forEach(r => {
+    running += r.credit - r.debit;
+    const row = sheet1.addRow([r.date, r.ref, r.desc, r.debit || null, r.credit || null, running]);
+    row.getCell(1).numFmt = 'yyyy-mm-dd';
+    row.getCell(4).numFmt = row.getCell(5).numFmt = row.getCell(6).numFmt = '#,##0.00';
+  });
+  sheet1.columns = [{ width: 12 }, { width: 14 }, { width: 60 }, { width: 14 }, { width: 14 }, { width: 16 }];
+
+  // --- Sheet 2: ملخص رصيد 2025 — same layout as the reference template ---
+  const sheet2 = workbook.addWorksheet('ملخص رصيد 2025');
+  const headerRow = sheet2.addRow(['الجرد الفعلي وما يجب ان يكون', 'القيمة', 'ما تم تسجيلة', 'الرصيد']);
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF714B67' } }; });
+
+  let totalValue = 0, totalRemaining = 0;
+  state.wipCategories.forEach((cat, i) => {
+    const posted = state.wipRows.filter(r => r.categoryIndex === i).reduce((s, r) => s + (r.credit - r.debit), 0);
+    const remaining = typeof cat.value === 'number' ? cat.value - posted : null;
+    if (typeof cat.value === 'number') totalValue += cat.value;
+    if (remaining !== null) totalRemaining += remaining;
+    const row = sheet2.addRow([cat.label, cat.value, posted, remaining]);
+    row.getCell(2).numFmt = row.getCell(3).numFmt = row.getCell(4).numFmt = '#,##0.00';
+  });
+  const totalRow = sheet2.addRow(['اجمالي التسويات', totalValue, null, totalRemaining]);
+  totalRow.font = { bold: true };
+  totalRow.getCell(2).numFmt = totalRow.getCell(4).numFmt = '#,##0.00';
+
+  const openingRows = state.wipRows.filter(r => r.categoryIndex === -3);
+  if (openingRows.length) {
+    const openingNet = Math.abs(openingRows.reduce((s, r) => s + (r.credit - r.debit), 0));
+    const noteRow = sheet2.addRow([`ملاحظة: الرصيد الافتتاحي (${openingNet.toLocaleString('en-US', { minimumFractionDigits: 2 })}) ثابت ومستبعد هنا — يمثل إجمالي القيم أعلاه، وليس ترحيل ضد فئة واحدة`]);
+    noteRow.font = { italic: true, size: 9, color: { argb: 'FF726C7A' } };
+  }
+
+  sheet2.addRow([]);
+
+  const outside = state.wipRows.filter(r => r.categoryIndex === -2).sort((a, b) => a.date - b.date);
+  const debitRows = outside.filter(r => r.debit > 0);
+  const creditRows = outside.filter(r => r.credit > 0);
+
+  const addOutsideSection = (title, rows) => {
+    const titleRow = sheet2.addRow([title]);
+    titleRow.font = { bold: true };
+    rows.forEach(r => {
+      const amount = r.debit > 0 ? r.debit : r.credit;
+      const questionable = isQuestionableWipRow(r.desc);
+      const row = sheet2.addRow([`${r.desc}${questionable ? '  [Unclassified]' : ''}`, amount, null, null]);
+      row.getCell(2).numFmt = '#,##0.00';
+      if (questionable) {
+        row.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDF3E4' } }; });
+        row.getCell(1).font = { color: { argb: 'FFDB8A2C' }, bold: true };
+      }
+    });
+  };
+  addOutsideSection('قيود برا التصنيف — مدين', debitRows);
+  addOutsideSection('قيود برا التصنيف — دائن', creditRows);
+
+  const outsideNet = outside.reduce((s, r) => s + (r.credit - r.debit), 0);
+  const remainderRow = sheet2.addRow(['المتبقي', null, null, totalRemaining - outsideNet]);
+  remainderRow.font = { bold: true };
+  remainderRow.getCell(4).numFmt = '#,##0.00';
+
+  sheet2.columns = [{ width: 55 }, { width: 16 }, { width: 16 }, { width: 16 }];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `WIP_Split_${new Date().toISOString().split('T')[0]}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  wipLog('Downloaded split workbook', 'ok');
+}
+
+(()=>{const zone=document.getElementById('zone-wip');zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag')});zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag');const file=e.dataTransfer.files[0];if(file){const input=document.getElementById('file-wip');const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;handleWipStatement(input)}})})();</script>
+</body></html>
