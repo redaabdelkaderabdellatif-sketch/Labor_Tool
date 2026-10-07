@@ -985,6 +985,15 @@ async function checkPassword() {
 
 const state = { t: null, r: null, n: null, result: null, allRefs: [], selectedRefs: [] };
 const WIP_OPID_HEADERS = ['رقم العملية', 'operation no', 'transaction no'];
+const WIP_ONGOING_KEY = 'gati_wip_ongoing_patterns_v1';
+const WIP_ONGOING_DEFAULTS = ['', '', '', ''];
+const WIP_CATEGORIES_KEY = 'gati_wip_categories_v1';
+const WIP_CATEGORY_DEFAULTS = [
+  { label: 'فئة تسوية 1', match: '', value: null },
+  { label: 'فئة تسوية 2', match: '', value: null },
+  { label: 'فئة تسوية 3', match: '', value: null },
+  { label: 'فئة تسوية 4', match: '', value: null }
+];
 
 function log(msg, type='') {
   const el = document.getElementById('log');
