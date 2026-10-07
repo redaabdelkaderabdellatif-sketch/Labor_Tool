@@ -931,8 +931,6 @@ function switchMainTab(name) {
 // with just {"passwordHash": "..."} still work and grant full access.
 const LOCK_HASH_URL = 'https://gist.githubusercontent.com/redaabdelkaderabdellatif-sketch/948e642e38bd9833399c1e2469300b58/raw/gaty-lock.json';
 
-state.accessLevel = 'full';
-
 async function fetchRemoteUsers() {
   const res = await fetch(LOCK_HASH_URL, { cache: 'no-store' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -984,7 +982,7 @@ async function checkPassword() {
   }
 }
 
-const state = { t: null, r: null, n: null, result: null, allRefs: [], selectedRefs: [] };
+const state = { t: null, r: null, n: null, result: null, allRefs: [], selectedRefs: [], accessLevel: 'full' };
 const WIP_OPID_HEADERS = ['رقم العملية', 'operation no', 'transaction no'];
 const WIP_ONGOING_KEY = 'gati_wip_ongoing_patterns_v1';
 const WIP_ONGOING_DEFAULTS = ['', '', '', ''];
