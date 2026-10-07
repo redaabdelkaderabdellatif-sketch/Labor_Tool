@@ -1,0 +1,1099 @@
+<!DOCTYPE html><html lang="en" dir="ltr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Suppliers — Gaty Cost</title>
+<script>(function(){var t=localStorage.getItem("gaty_suppliers_gate");if(!t||Date.now()-Number(t)>=3600000)window.location.replace("index.html")})();</script><script src="xlsx.full.min.js"></script><script src="exceljs.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #714B67;
+    --primary-dark: #5B3B54;
+    --primary-light: #F3ECF2;
+    --bg: #F7F7F9;
+    --surface: #FFFFFF;
+    --border: #E3E1E6;
+    --text: #23212B;
+    --muted: #726C7A;
+    --accent: #714B67;
+    --accent2: #8B5F80;
+    --green: #1E8E5A;
+    --green-light: #E8F5EE;
+    --red: #D64550;
+    --red-light: #FBEAEC;
+    --orange: #DB8A2C;
+    --yellow: #FDF3E4;
+    --radius: 10px;
+    --shadow: 0 2px 10px rgba(35,33,43,0.08);
+  }
+
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px;
+    font-size: 14px;
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    padding: 20px 28px;
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header p { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .badge {
+    background: rgba(255,255,255,0.16);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .signature-badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: default;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-blue  { background: var(--primary); }
+  .dot-red   { background: var(--red); }
+  .dot-green { background: var(--green); }
+
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--primary); background: var(--primary-light); }
+  .upload-zone.loaded { border-color: var(--green); border-style: solid; background: var(--green-light); }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 28px; margin-bottom: 8px; }
+  .upload-label { font-size: 13px; color: var(--muted); }
+  .upload-label strong { color: var(--text); }
+  .file-name {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--green);
+    font-weight: 600;
+    display: none;
+  }
+  .file-name.show { display: block; }
+
+  .stats-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .stat-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .stat-chip span { font-weight: 700; color: var(--text); }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+  .btn-success {
+    background: var(--green);
+    color: white;
+    margin-top: 12px;
+  }
+  .btn-success:hover { background: #17703F; }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .btn-row .btn { margin-top: 0; }
+  .btn-outline {
+    background: var(--surface);
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+  }
+  .btn-outline:hover { background: var(--primary-light); }
+  .cell-input {
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--surface);
+    color: var(--text);
+  }
+  .cell-input:focus { border-color: var(--primary); outline: none; }
+
+  .log-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    font-size: 12px;
+    line-height: 1.8;
+    min-height: 80px;
+    max-height: 200px;
+    overflow-y: auto;
+    direction: ltr;
+    color: var(--muted);
+    font-family: 'Courier New', monospace;
+  }
+  .log-ok   { color: var(--green); }
+  .log-warn { color: var(--orange); }
+  .log-err  { color: var(--red); }
+  .log-info { color: var(--accent2); }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--green);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 16px;
+    box-shadow: var(--shadow);
+    display: none;
+  }
+  .result-card.show { display: block; }
+  .result-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 16px;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
+  .summary-box {
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 14px;
+    text-align: center;
+  }
+  .summary-box .num { font-size: 22px; font-weight: 800; color: var(--primary); }
+  .summary-box .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .preview-table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    min-width: 700px;
+  }
+  th {
+    background: var(--bg);
+    color: var(--muted);
+    padding: 10px 10px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.2px;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  tr:hover td { background: var(--primary-light); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .tag-t { background: var(--primary-light); color: var(--primary); }
+  .tag-r { background: var(--red-light); color: var(--red); }
+
+  .ref-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 30;
+    display: none;
+  }
+  .ref-suggestions.show { display: block; }
+  .ref-suggestion-item {
+    padding: 9px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+  }
+  .ref-suggestion-item:last-child { border-bottom: none; }
+  .ref-suggestion-item:hover { background: var(--primary-light); }
+  .ref-suggestion-empty {
+    padding: 9px 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .ref-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .ref-chip button {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    padding: 0;
+  }
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 8px 0;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  .tab-nav {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    padding: 10px 16px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: color .15s, background .15s;
+  }
+  .tab-btn:hover { color: var(--text); background: var(--bg); }
+  .tab-btn.active {
+    color: #fff;
+    background: var(--primary);
+    box-shadow: 0 2px 6px rgba(113,75,103,0.35);
+  }
+
+  .main-tab-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .main-tab-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px 22px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 10px;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .main-tab-btn:hover { color: var(--text); border-color: var(--primary); }
+  .main-tab-btn.active {
+    color: #fff;
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(113,75,103,0.35);
+  }
+  .main-tab-page { display: block; }
+
+  .lock-overlay {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+  }
+  .lock-box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 340px;
+    box-shadow: 0 8px 30px rgba(35,33,43,0.3);
+    text-align: center;
+  }
+  .lock-box .lock-icon { font-size: 32px; margin-bottom: 10px; }
+  .lock-box h2 { font-size: 16px; color: var(--primary); margin-bottom: 6px; }
+  .lock-box p { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+  .lock-box input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-align: center;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .lock-box .lock-err {
+    color: var(--red);
+    font-size: 12px;
+    margin-top: 4px;
+    min-height: 16px;
+    display: none;
+  }
+  .lock-box .lock-err.show { display: block; }
+
+  .app-footer {
+    text-align: center;
+    padding: 32px 0 12px;
+  }
+  .app-footer .by-line {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .app-footer .signature {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.3px;
+    color: var(--primary);
+  }
+</style></head><body>
+<div class="header" style="margin-bottom:20px"><div><h1>Suppliers</h1><p>Supplier ledger and debt aging</p></div><div class="header-right"><a class="btn btn-outline" href="index.html" style="color:white;border-color:#ffffff88">← Gaty Cost</a><div class="badge">Gaty Furniture</div></div></div>
+<div class="card" style="margin-bottom:16px">
+    <div class="card-title">
+      <span class="dot dot-blue"></span>
+      Supplier Ledger (General Ledger)
+    </div>
+    <div class="upload-zone" id="zone-ledger">
+      <input type="file" id="file-ledger" accept=".xlsx,.xls" onchange="handleSupplierLedger(this)">
+      <div class="upload-icon">📒</div>
+      <div class="upload-label"><strong>Drag & drop</strong> or click to choose<br>The general ledger export for supplier accounts (one row per transaction, with date, debit and credit)</div>
+      <div class="file-name" id="fname-ledger"></div>
+    </div>
+    <div class="stats-row" id="stats-ledger"></div>
+    <div class="log-box" id="ledger-log" style="margin-top:12px">Waiting for the ledger file...</div>
+  </div>
+
+  <div class="card" id="aging-controls-card" style="margin-bottom:16px; display:none">
+    <div class="card-title">📅 Aging Periods</div>
+    <div style="font-size:12px; color:var(--muted);">
+      Standard periods: <strong style="color:var(--text)">0-30 · 31-60 · 61-90 · 91-120 · 120+ days</strong>. As-of date: today. Outstanding amounts are matched FIFO (oldest invoices cleared first by later payments) then aged by invoice date.
+    </div>
+  </div>
+
+  <div class="card" id="supplier-search-card" style="margin-bottom:16px; display:none">
+    <div class="card-title">
+      <span class="dot dot-blue"></span>
+      Find a Supplier
+    </div>
+    <div id="supplier-search-wrap" style="position:relative; max-width:480px;">
+      <input type="text" id="supplier-search" autocomplete="off" placeholder="Type part of a supplier name..." oninput="onSupplierSearchInput()" onfocus="onSupplierSearchInput()" style="width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:var(--radius); font-family:inherit; font-size:14px; background:var(--bg); color:var(--text);">
+      <div class="ref-suggestions" id="supplier-suggestions"></div>
+    </div>
+  </div>
+
+  <div class="card" id="supplier-detail-card" style="margin-bottom:16px; display:none">
+    <div class="card-title" id="supplier-detail-title">📇 Supplier Detail</div>
+    <div class="summary-grid">
+      <div class="summary-box"><div class="num" id="sd-total-open">0</div><div class="lbl">Total Outstanding</div></div>
+      <div class="summary-box"><div class="num" id="sd-prepayment">0</div><div class="lbl">Advance / Credit</div></div>
+      <div class="summary-box">
+        <input type="number" id="sd-credit-period" placeholder="e.g. 30" oninput="onSupplierTermChange('creditPeriodDays', this.value)" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:16px; text-align:center; background:var(--surface); color:var(--text);">
+        <div class="lbl">Agreed Credit Period (days)</div>
+      </div>
+      <div class="summary-box">
+        <input type="number" id="sd-credit-limit" placeholder="e.g. 50000" oninput="onSupplierTermChange('creditLimit', this.value)" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:16px; text-align:center; background:var(--surface); color:var(--text);">
+        <div class="lbl">Agreed Credit Limit</div>
+      </div>
+    </div>
+    <div id="sd-status-line" style="font-size:12px; margin-bottom:12px;"></div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+      The credit period and credit limit are saved to this device as soon as you type them, and stay exactly as set — they only change when you edit them again, regardless of what ledger file you upload later.
+    </p>
+    <button class="btn btn-success" onclick="downloadSupplierStatement()">⬇️ Download Statement (outstanding invoices highlighted)</button>
+  </div>
+
+  <div class="card" id="aging-summary-card" style="margin-bottom:16px; display:none">
+    <div class="card-title">📊 Aging Summary</div>
+    <div class="preview-table-wrap">
+      <table>
+        <thead id="aging-summary-head"></thead>
+        <tbody id="aging-summary-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="aging-table-card" style="margin-bottom:16px; display:none">
+    <div class="card-title">📋 Supplier Aging Detail</div>
+    <div class="preview-table-wrap">
+      <table>
+        <thead id="aging-detail-head"></thead>
+        <tbody id="aging-detail-body"></tbody>
+      </table>
+    </div>
+    <button class="btn btn-success" onclick="downloadAgingResult()">⬇️ Download Aging Report (.xlsx)</button>
+  </div>
+
+</div><div class="signature" style="text-align:center;margin:20px;color:var(--muted)">Reda Alshrkawy</div>
+<script>const state={ledgerAccounts:null,agingResult:null,supplierTerms:{},selectedSupplierKey:null};function findColumn(headerRow, candidates) {
+  // Pass 1: exact match, checked in candidate priority order
+  for (const cand of candidates) {
+    const idx = headerRow.findIndex(cell => String(cell || '').trim().toLowerCase() === cand.toLowerCase());
+    if (idx !== -1) return idx;
+  }
+  // Pass 2: substring match, checked in candidate priority order
+  for (const cand of candidates) {
+    const idx = headerRow.findIndex(cell => {
+      const c = String(cell || '').trim().toLowerCase();
+      return c && c.includes(cand.toLowerCase());
+    });
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+const LEDGER_REF_HEADERS   = ['رقم المرجع', 'reference', 'ref'];
+const LEDGER_DESC_HEADERS  = ['تعريف', 'اسم الحساب', 'اسم المورد', 'البيان', 'description'];
+const LEDGER_DATE_HEADERS  = ['تاريخ العملية', 'التاريخ', 'تاريخ القيد', 'date', 'posting date'];
+const LEDGER_DEBIT_HEADERS = ['مدين', 'debit'];
+const LEDGER_CREDIT_HEADERS = ['دائن', 'credit'];
+
+function ledgerLog(msg, type = '') {
+  const el = document.getElementById('ledger-log');
+  const line = document.createElement('div');
+  line.className = type ? `log-${type}` : '';
+  line.textContent = `[${new Date().toLocaleTimeString('en-US')}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function findLedgerHeaderRow(raw) {
+  for (let i = 0; i < Math.min(20, raw.length); i++) {
+    const row = raw[i];
+    if (!row) continue;
+    const dateCol = findColumn(row, LEDGER_DATE_HEADERS);
+    const debitCol = findColumn(row, LEDGER_DEBIT_HEADERS);
+    const creditCol = findColumn(row, LEDGER_CREDIT_HEADERS);
+    const refCol = findColumn(row, LEDGER_REF_HEADERS);
+    const descCol = findColumn(row, LEDGER_DESC_HEADERS);
+    if (dateCol === -1 || debitCol === -1 || creditCol === -1 || refCol === -1 || descCol === -1) continue;
+    return { headerRowIdx: i, dateCol, debitCol, creditCol, refCol, descCol };
+  }
+  return null;
+}
+
+// Accepts a real JS Date (from cellDates:true), an Excel serial-date number,
+// or common DD/MM/YYYY-style text, and returns a JS Date (or null).
+function parseLedgerDate(v) {
+  if (v instanceof Date && !isNaN(v)) return v;
+  if (typeof v === 'number') {
+    const epoch = Date.UTC(1899, 11, 30);
+    return new Date(epoch + v * 86400000);
+  }
+  if (typeof v === 'string') {
+    const s = v.trim();
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (m) {
+      let [, d, mo, y] = m;
+      if (y.length === 2) y = '20' + y;
+      return new Date(Date.UTC(+y, +mo - 1, +d));
+    }
+    const parsed = new Date(s);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return null;
+}
+
+// Groups ledger rows into per-account transaction lists by walking the
+// account blocks: a row with a reference + description but no date and no
+// amount opens a new account; any row after that with a real date and a
+// non-zero debit or credit (transaction lines, and non-zero itemized
+// opening-balance lines alike) is recorded under the current account.
+function parseSupplierLedger(raw) {
+  const hdr = findLedgerHeaderRow(raw);
+  if (!hdr) return null;
+  const { headerRowIdx, dateCol, debitCol, creditCol, refCol, descCol } = hdr;
+
+  const accounts = {};
+  let currentKey = null;
+
+  for (let i = headerRowIdx + 1; i < raw.length; i++) {
+    const row = raw[i];
+    if (!row || row.every(v => v === null || v === undefined || v === '')) continue;
+
+    const refVal = String(row[refCol] ?? '').trim();
+    const descVal = String(row[descCol] ?? '').trim();
+    const dateVal = parseLedgerDate(row[dateCol]);
+    const debitVal = parseFloat(String(row[debitCol] ?? '0').replace(/,/g, '')) || 0;
+    const creditVal = parseFloat(String(row[creditCol] ?? '0').replace(/,/g, '')) || 0;
+
+    // Account header: reference + description present, but no date and no
+    // amount — this starts (or re-enters) an account block.
+    if (!dateVal && refVal && descVal && debitVal === 0 && creditVal === 0) {
+      currentKey = refVal;
+      if (!accounts[currentKey]) accounts[currentKey] = { code: refVal, name: descVal, transactions: [] };
+      continue;
+    }
+
+    // Every block ends with "إجمالي العملية" (period total) and
+    // "الرصيد الختامى" (closing balance) summary lines — these repeat
+    // amounts already present in the individual transaction rows above
+    // them, so counting them too would double the balance.
+    if (descVal.includes('الرصيد الختام') || descVal.includes('جمالي العملية')) continue;
+
+    // Anything else with a real date and a non-zero amount is a transaction
+    // under whichever account block we're currently inside.
+    if (!dateVal || (debitVal === 0 && creditVal === 0) || !currentKey) continue;
+
+    accounts[currentKey].transactions.push({ date: dateVal, debit: debitVal, credit: creditVal, ref: refVal, desc: descVal });
+  }
+
+  // Drop the parent/control account itself (code "2111") — it's a
+  // summary-only block, not an individual supplier.
+  delete accounts['2111'];
+
+  return accounts;
+}
+
+// Standard accounting aging periods — fixed, not user-configurable, so
+// every report reads the same way regardless of who runs it.
+const AGING_BUCKET_BOUNDARIES = [30, 60, 90, 120];
+
+function buildAgingBucketLabels() {
+  return ['0-30', '31-60', '61-90', '91-120', '120+'];
+}
+
+// FIFO open-item aging: newer payments (debits) clear the OLDEST unpaid
+// invoices (credits) first, leaving a remainder of still-open invoice
+// amounts each tagged with their original date. Those open amounts are then
+// bucketed by age (0-30 / 31-60 / 61-90 / 91-120 / 120+ days) as of today. A
+// payment that exceeds all open invoices is carried forward as an
+// advance/credit balance that offsets the next invoice(s) chronologically.
+// Each source transaction object is tagged with a `remainingOpen` amount
+// (mutated in place, reset on every call) so the supplier statement export
+// can show exactly which invoices are open — fully or partially — and by
+// how much. `maxOpenAgeDays` (the age of the single oldest still-open
+// invoice) is what "days overdue vs. the agreed credit period" is based on.
+function computeAgingForAccount(transactions, today) {
+  const sorted = transactions.slice().sort((a, b) => a.date - b.date);
+  sorted.forEach(t => { t.remainingOpen = t.credit > 0 ? t.credit : 0; });
+
+  const openQueue = [];
+  let prepayment = 0;
+
+  sorted.forEach(txn => {
+    if (txn.credit > 0) {
+      if (prepayment > 0) {
+        const offset = Math.min(prepayment, txn.remainingOpen);
+        prepayment -= offset;
+        txn.remainingOpen -= offset;
+      }
+      if (txn.remainingOpen > 0.005) openQueue.push(txn);
+    }
+
+    if (txn.debit > 0) {
+      let remaining = txn.debit;
+      while (remaining > 0.005 && openQueue.length > 0) {
+        const oldest = openQueue[0];
+        if (oldest.remainingOpen <= remaining + 0.005) {
+          remaining -= oldest.remainingOpen;
+          oldest.remainingOpen = 0;
+          openQueue.shift();
+        } else {
+          oldest.remainingOpen -= remaining;
+          remaining = 0;
+        }
+      }
+      if (remaining > 0.005) prepayment += remaining;
+    }
+  });
+
+  const buckets = [0, 0, 0, 0, 0];
+  let totalOpen = 0;
+  let maxOpenAgeDays = 0;
+  sorted.forEach(txn => {
+    if (txn.remainingOpen > 0.005) {
+      const ageDays = Math.floor((today - txn.date) / 86400000);
+      let idx = AGING_BUCKET_BOUNDARIES.findIndex(b => ageDays <= b);
+      if (idx === -1) idx = AGING_BUCKET_BOUNDARIES.length;
+      buckets[idx] += txn.remainingOpen;
+      totalOpen += txn.remainingOpen;
+      if (ageDays > maxOpenAgeDays) maxOpenAgeDays = ageDays;
+    }
+  });
+
+  return { buckets, totalOpen, prepayment, maxOpenAgeDays, transactions: sorted };
+}
+
+function handleSupplierLedger(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+      const accounts = parseSupplierLedger(raw);
+
+      document.getElementById('ledger-log').innerHTML = '';
+
+      if (!accounts || Object.keys(accounts).length === 0) {
+        document.getElementById('aging-controls-card').style.display = 'none';
+        document.getElementById('aging-summary-card').style.display = 'none';
+        document.getElementById('aging-table-card').style.display = 'none';
+        ledgerLog("Couldn't find account, date, debit and credit columns in this ledger — check the format", 'err');
+        return;
+      }
+
+      state.ledgerAccounts = accounts;
+      const accCount = Object.keys(accounts).length;
+      const txnCount = Object.values(accounts).reduce((s, a) => s + a.transactions.length, 0);
+
+      document.getElementById('fname-ledger').textContent = '✓ ' + file.name;
+      document.getElementById('fname-ledger').classList.add('show');
+      document.getElementById('zone-ledger').classList.add('loaded');
+      document.getElementById('stats-ledger').innerHTML =
+        `<div class="stat-chip">Accounts: <span>${accCount}</span></div>
+         <div class="stat-chip">Transactions: <span>${txnCount}</span></div>`;
+      ledgerLog(`Loaded ${file.name} — ${accCount} account(s), ${txnCount} transaction(s)`, 'ok');
+
+      document.getElementById('aging-controls-card').style.display = 'block';
+      document.getElementById('supplier-search-card').style.display = 'block';
+      renderAgingTable();
+    } catch (err) {
+      document.getElementById('ledger-log').innerHTML = '';
+      ledgerLog(`Error reading file: ${err.message}`, 'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderAgingTable() {
+  if (!state.ledgerAccounts) return;
+
+  const buckets = buildAgingBucketLabels();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const perAccountResults = [];
+  const grandTotals = [0, 0, 0, 0, 0];
+
+  Object.keys(state.ledgerAccounts).forEach(key => {
+    const acc = state.ledgerAccounts[key];
+    const result = computeAgingForAccount(acc.transactions, today);
+    const term = state.supplierTerms[acc.code] || {};
+    const overLimitBy = typeof term.creditLimit === 'number' ? Math.max(0, result.totalOpen - term.creditLimit) : null;
+    const overdueByDays = typeof term.creditPeriodDays === 'number' ? Math.max(0, result.maxOpenAgeDays - term.creditPeriodDays) : null;
+    perAccountResults.push({ code: acc.code, name: acc.name, ...result, term, overLimitBy, overdueByDays });
+    result.buckets.forEach((v, i) => { grandTotals[i] += v; });
+  });
+
+  // Suppliers exceeding their agreed limit/period first, then by outstanding amount
+  perAccountResults.sort((a, b) => {
+    const aExceeds = (a.overLimitBy > 0.005) || (a.overdueByDays > 0);
+    const bExceeds = (b.overLimitBy > 0.005) || (b.overdueByDays > 0);
+    if (aExceeds !== bExceeds) return aExceeds ? -1 : 1;
+    return b.totalOpen - a.totalOpen;
+  });
+
+  const grandTotalSum = grandTotals.reduce((a, b) => a + b, 0);
+
+  const summaryHead = document.getElementById('aging-summary-head');
+  const summaryBody = document.getElementById('aging-summary-body');
+  summaryHead.innerHTML = `<tr><th>Bucket (days)</th><th>Total Outstanding</th><th>% of Total</th></tr>`;
+  summaryBody.innerHTML = buckets.map((b, i) => `
+    <tr>
+      <td>${b}</td>
+      <td>${grandTotals[i].toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+      <td>${grandTotalSum ? ((grandTotals[i] / grandTotalSum) * 100).toFixed(1) : '0.0'}%</td>
+    </tr>`).join('') + `
+    <tr style="font-weight:700">
+      <td>Total</td>
+      <td>${grandTotalSum.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+      <td>100%</td>
+    </tr>`;
+
+  const detailHead = document.getElementById('aging-detail-head');
+  const detailBody = document.getElementById('aging-detail-body');
+  detailHead.innerHTML = `<tr><th>Account</th><th>Supplier</th>${buckets.map(b => `<th>${b}</th>`).join('')}<th>Total</th><th>Advance/Credit</th><th>Credit Limit</th><th>Credit Period</th><th>Over Limit By</th><th>Overdue By (days)</th><th>Status</th></tr>`;
+  detailBody.innerHTML = perAccountResults.map(r => {
+    const exceedsLimit = r.overLimitBy > 0.005;
+    const exceedsPeriod = r.overdueByDays > 0;
+    const rowStyle = (exceedsLimit || exceedsPeriod) ? ' style="background:var(--red-light)"' : '';
+
+    let status;
+    if (exceedsLimit && exceedsPeriod) status = '<span class="tag tag-r">⚠️ Over Limit &amp; Overdue</span>';
+    else if (exceedsLimit) status = '<span class="tag tag-r">⚠️ Over Limit</span>';
+    else if (exceedsPeriod) status = '<span class="tag tag-r">⚠️ Overdue</span>';
+    else if (r.term.creditLimit != null || r.term.creditPeriodDays != null) status = '<span class="tag tag-t">OK</span>';
+    else status = '<span style="color:var(--muted)">No terms set</span>';
+
+    return `
+    <tr${rowStyle}>
+      <td>${r.code}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">${r.name}</td>
+      ${r.buckets.map(v => `<td>${v > 0.005 ? v.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</td>`).join('')}
+      <td style="font-weight:700">${r.totalOpen.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+      <td>${r.prepayment > 0.005 ? r.prepayment.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</td>
+      <td>${r.term.creditLimit != null ? r.term.creditLimit.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}</td>
+      <td>${r.term.creditPeriodDays != null ? r.term.creditPeriodDays + ' d' : '—'}</td>
+      <td style="${exceedsLimit ? 'color:var(--red);font-weight:700' : ''}">${exceedsLimit ? r.overLimitBy.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}</td>
+      <td style="${exceedsPeriod ? 'color:var(--red);font-weight:700' : ''}">${exceedsPeriod ? r.overdueByDays + ' d' : '—'}</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
+
+  state.agingResult = { buckets, perAccountResults, grandTotals };
+
+  document.getElementById('aging-summary-card').style.display = 'block';
+  document.getElementById('aging-table-card').style.display = 'block';
+}
+
+function downloadAgingResult() {
+  if (!state.agingResult) return;
+  const { buckets, perAccountResults } = state.agingResult;
+
+  const headers = ['Account Code', 'Supplier', ...buckets, 'Total Outstanding', 'Advance/Credit', 'Credit Limit', 'Credit Period (days)', 'Over Limit By', 'Overdue By (days)'];
+  const data = perAccountResults.map(r => [
+    r.code, r.name, ...r.buckets, r.totalOpen, r.prepayment,
+    r.term.creditLimit != null ? r.term.creditLimit : '',
+    r.term.creditPeriodDays != null ? r.term.creditPeriodDays : '',
+    r.overLimitBy > 0.005 ? r.overLimitBy : '',
+    r.overdueByDays > 0 ? r.overdueByDays : ''
+  ]);
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  ws['!cols'] = [{ wch: 14 }, { wch: 32 }, ...buckets.map(() => ({ wch: 12 })), { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Supplier Aging');
+
+  const today = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, `SupplierAging_${today}.xlsx`);
+  ledgerLog('Downloaded aging report', 'ok');
+}
+
+// ===== Supplier search, detail panel, and highlighted statement export =====
+
+// Persisted per-supplier agreed credit period (in days), keyed by account
+// code. Saved to this device as soon as it's typed, and left completely
+// alone otherwise — it is never recalculated or reset automatically, only
+// changed when the user edits it again.
+const SUPPLIER_TERMS_KEY = 'gati_supplier_payment_terms_v1';
+
+function loadSupplierTerms() {
+  try {
+    const raw = localStorage.getItem(SUPPLIER_TERMS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) { return {}; }
+}
+
+function saveSupplierTerms(terms) {
+  try { localStorage.setItem(SUPPLIER_TERMS_KEY, JSON.stringify(terms)); } catch (e) { /* private mode — ignore */ }
+}
+
+state.supplierTerms = loadSupplierTerms();
+state.selectedSupplierKey = null;
+
+function onSupplierSearchInput() {
+  const box = document.getElementById('supplier-suggestions');
+  const q = document.getElementById('supplier-search').value.trim().toLowerCase();
+
+  if (!q || !state.ledgerAccounts) { box.classList.remove('show'); box.innerHTML = ''; return; }
+
+  const matches = Object.keys(state.ledgerAccounts)
+    .filter(key => state.ledgerAccounts[key].name.toLowerCase().includes(q));
+
+  if (matches.length === 0) {
+    box.innerHTML = `<div class="ref-suggestion-empty">No matching suppliers</div>`;
+    box.classList.add('show');
+    return;
+  }
+
+  box.innerHTML = matches.map(key => {
+    const acc = state.ledgerAccounts[key];
+    return `<div class="ref-suggestion-item" onclick="selectSupplier('${key.replace(/'/g, "\\'")}')">${acc.name} <span style="color:var(--muted)">(${acc.code})</span></div>`;
+  }).join('');
+  box.classList.add('show');
+}
+
+function selectSupplier(key) {
+  if (!state.ledgerAccounts || !state.ledgerAccounts[key]) return;
+  state.selectedSupplierKey = key;
+
+  document.getElementById('supplier-search').value = state.ledgerAccounts[key].name;
+  document.getElementById('supplier-suggestions').classList.remove('show');
+
+  renderSupplierDetail();
+}
+
+function onSupplierTermChange(field, value) {
+  if (!state.selectedSupplierKey) return;
+  const acc = state.ledgerAccounts[state.selectedSupplierKey];
+  const num = parseFloat(value);
+
+  if (!state.supplierTerms[acc.code]) state.supplierTerms[acc.code] = {};
+  if (value === '' || isNaN(num)) {
+    delete state.supplierTerms[acc.code][field];
+    if (Object.keys(state.supplierTerms[acc.code]).length === 0) delete state.supplierTerms[acc.code];
+  } else {
+    state.supplierTerms[acc.code][field] = num;
+  }
+  saveSupplierTerms(state.supplierTerms);
+  renderSupplierDetail();
+  if (state.ledgerAccounts) renderAgingTable(); // keep the main report's exceedance columns in sync
+}
+
+function renderSupplierDetail() {
+  if (!state.selectedSupplierKey || !state.ledgerAccounts) return;
+  const acc = state.ledgerAccounts[state.selectedSupplierKey];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const result = computeAgingForAccount(acc.transactions, today);
+  const term = state.supplierTerms[acc.code] || {};
+
+  document.getElementById('supplier-detail-title').textContent = `📇 ${acc.name} (${acc.code})`;
+  document.getElementById('sd-total-open').textContent = result.totalOpen.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  document.getElementById('sd-prepayment').textContent = result.prepayment.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  document.getElementById('sd-credit-period').value = term.creditPeriodDays != null ? term.creditPeriodDays : '';
+  document.getElementById('sd-credit-limit').value = term.creditLimit != null ? term.creditLimit : '';
+
+  const overLimitBy = typeof term.creditLimit === 'number' ? Math.max(0, result.totalOpen - term.creditLimit) : null;
+  const overdueByDays = typeof term.creditPeriodDays === 'number' ? Math.max(0, result.maxOpenAgeDays - term.creditPeriodDays) : null;
+
+  const statusEl = document.getElementById('sd-status-line');
+  const parts = [];
+  if (overLimitBy > 0.005) parts.push(`⚠️ Over credit limit by <strong>${overLimitBy.toLocaleString('en-US', { maximumFractionDigits: 2 })}</strong>`);
+  if (overdueByDays > 0) parts.push(`⚠️ Oldest open invoice is <strong>${overdueByDays} day(s)</strong> past the agreed credit period`);
+  if (parts.length === 0 && (term.creditLimit != null || term.creditPeriodDays != null)) parts.push('✅ Within agreed limit and period');
+  statusEl.innerHTML = parts.length ? parts.map(p => `<div style="color:${p.startsWith('⚠️') ? 'var(--red)' : 'var(--green)'};margin-bottom:2px">${p}</div>`).join('') : '';
+
+  document.getElementById('supplier-detail-card').style.display = 'block';
+}
+
+// Exports the selected supplier's full transaction history as a formatted,
+// highlighted Excel statement (via ExcelJS, which — unlike the SheetJS
+// writer used elsewhere in this tool — supports real cell styling). Any
+// line with a non-zero remaining open amount is filled amber; the exact
+// outstanding amount is also shown in its own column, so a partially-paid
+// invoice reads as "open for X of Y", not just "open".
+async function downloadSupplierStatement() {
+  if (!state.selectedSupplierKey || !state.ledgerAccounts) return;
+  const acc = state.ledgerAccounts[state.selectedSupplierKey];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const result = computeAgingForAccount(acc.transactions, today);
+  const term = state.supplierTerms[acc.code] || {};
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Statement');
+
+  sheet.mergeCells('A1:G1');
+  sheet.getCell('A1').value = `Account Statement — ${acc.name} (${acc.code})`;
+  sheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FF714B67' } };
+
+  sheet.getCell('A2').value = `Generated: ${new Date().toLocaleString('en-US')}`;
+  sheet.getCell('A2').font = { size: 9, color: { argb: 'FF726C7A' } };
+  sheet.getCell('A3').value = `Agreed credit period: ${term.creditPeriodDays != null ? term.creditPeriodDays + ' days' : 'not set'}  |  Agreed credit limit: ${term.creditLimit != null ? term.creditLimit.toLocaleString('en-US') : 'not set'}`;
+  sheet.getCell('A3').font = { size: 9, color: { argb: 'FF726C7A' } };
+
+  const headerRowIdx = 5;
+  const headers = ['Date', 'Reference', 'Description', 'Debit', 'Credit', 'Running Balance', 'Outstanding Amount'];
+  const headerRow = sheet.getRow(headerRowIdx);
+  headers.forEach((h, i) => { headerRow.getCell(i + 1).value = h; });
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.eachCell(cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF714B67' } };
+  });
+
+  let running = 0;
+  result.transactions.forEach((t, i) => {
+    running += (t.credit || 0) - (t.debit || 0);
+    const row = sheet.getRow(headerRowIdx + 1 + i);
+    row.getCell(1).value = t.date;
+    row.getCell(1).numFmt = 'yyyy-mm-dd';
+    row.getCell(2).value = t.ref || '';
+    row.getCell(3).value = t.desc || '';
+    row.getCell(4).value = t.debit || 0;
+    row.getCell(5).value = t.credit || 0;
+    row.getCell(6).value = running;
+    row.getCell(7).value = t.remainingOpen > 0.005 ? t.remainingOpen : 0;
+    row.getCell(4).numFmt = row.getCell(5).numFmt = row.getCell(6).numFmt = row.getCell(7).numFmt = '#,##0.00';
+
+    if (t.remainingOpen > 0.005) {
+      const isFullyOpen = t.remainingOpen >= (t.credit - 0.005);
+      const fillColor = isFullyOpen ? 'FFFBEAEC' : 'FFFDF3E4'; // full = light red, partial = light amber
+      for (let c = 1; c <= 7; c++) {
+        row.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+      }
+      row.getCell(7).font = { bold: true, color: { argb: isFullyOpen ? 'FFD64550' : 'FFDB8A2C' } };
+    }
+  });
+
+  sheet.columns = [{ width: 12 }, { width: 14 }, { width: 48 }, { width: 14 }, { width: 14 }, { width: 16 }, { width: 18 }];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Statement_${acc.code}_${new Date().toISOString().split('T')[0]}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  ledgerLog(`Downloaded statement for ${acc.name}`, 'ok');
+}
+
+// ===== Work In Process: split a combined account statement into an
+// ongoing "2026" ledger and a "2025 settlement" summary =====
+//
+// Two-stage classification, per how this account is actually used:
+//   Stage 1 — a row belongs to the ongoing 2026 ledger if its description
+//   matches one of the 4 confirmed patterns below (production consuming
+//   raw material, stock/inventory transfers — in either language).
+//   Stage 2 — everything else is a one-off entry clearing an OLD 2025
+//   balance (a physical-count write-off, December 2025 sales cost, etc.),
+//   grouped into 4 categories, each with an externally-known target
+//   "Value" (e.g. an actual physical inventory count) that isn't in the
+//   ledger at all — so it's a persisted, user-editable field, matched to
+//   real ledger rows by a plain "contains this text" rule that's also
+//   user-editable, same as the Stage-1 patterns.
+//
+// NOTE: the Stage-1 patterns are confirmed. The Stage-2 category
+// labels/match-text are Claude's best guess from analyzing the example
+// files — please review and correct them in the UI if needed.
+const WIP_ONGOING_KEY = 'gati_wip_ongoing_patterns_v1';
+const WIP_CATEGORIES_KEY = 'gati_wip_categories_v1';
+
+const WIP_ONGOING_DEFAULTS = [
+  'Production Process - Raw Material',
+  'تحويل المخزون',
+  'Stock Transfer',
+  'عملية الإنتاج - المواد الخام'
+];
+
+const WIP_CATEGORY_DEFAULTS = [
+  { label: 'تكلفة مخزون المعرض حسب الجرد الفعلي (Showroom — physical count)', match: 'اثبات مخزون', value: 250000 },
+  { label: 'تكلفة مخزون تحت التشغيل آخر المدة - نسبة الإنجاز (WIP — % completion)', match: 'الانجاز', value: 814249.9583050001 },
+  { label: 'تكلفة مبيعات الفوترة الافتراضية (Virtual invoicing cost)', match: 'طلب بيع', value: 2080520.5923478256 },
+  { label: 'تكلفة مبيعات شهر 12-2025 (December 2025 sales cost)', match: 'مرحله من شهر 12-2025', value: 116292.258 }
+];
+
+
+(()=>{const zone=document.getElementById('zone-ledger');zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag')});zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag');const file=e.dataTransfer.files[0];if(file){const input=document.getElementById('file-ledger');const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;handleSupplierLedger(input)}})})();</script></body></html>
