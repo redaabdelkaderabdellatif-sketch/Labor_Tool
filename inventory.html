@@ -984,6 +984,7 @@ async function checkPassword() {
 }
 
 const state = { t: null, r: null, n: null, result: null, allRefs: [], selectedRefs: [] };
+const WIP_OPID_HEADERS = ['رقم العملية', 'operation no', 'transaction no'];
 
 function log(msg, type='') {
   const el = document.getElementById('log');
@@ -2111,7 +2112,7 @@ function wipLog(msg, type = '') {
   el.scrollTop = el.scrollHeight;
 }
 
-const WIP_OPID_HEADERS = ['رقم العملية', 'operation no', 'transaction no'];
+
 
 function findWipHeaderRow(raw) {
   for (let i = 0; i < Math.min(20, raw.length); i++) {
