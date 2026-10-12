@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>نظام المحاسبة — Gaty</title>
 <script>
-(function(){var stamp=localStorage.getItem('gaty_apps_gate');if(!stamp||Date.now()-Number(stamp)>=3600000)location.replace('index.html')})()
+(function(){var stamp=localStorage.getItem('gaty_apps_gate'),scope=JSON.parse(localStorage.getItem('gaty_apps_scope')||'[]');if(!stamp||Date.now()-Number(stamp)>=3600000||!scope.includes('accounting'))location.replace('index.html')})()
 </script>
 <script src="xlsx.full.min.js"></script>
 <style>
