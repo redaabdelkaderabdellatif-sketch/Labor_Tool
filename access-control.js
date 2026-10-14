@@ -155,7 +155,15 @@
     render();
   }
 
-  async function submitAdminOtp(event) {
+    // Catch OTP submits before the recreated form can trigger native navigation.
+  document.addEventListener("submit", event => {
+    if (!event.target || event.target.id !== "otpForm") return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    submitAdminOtp(event);
+  }, true);
+
+async function submitAdminOtp(event) {
     event.preventDefault();
     if (!OTP_CODE.trim() || OTP_BUSY) return;
     OTP_BUSY = true;
