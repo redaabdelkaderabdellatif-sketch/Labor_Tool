@@ -209,11 +209,12 @@
   })(logout);
 
   const oldRenderOtp = render;
+
   render = function () {
     oldRenderOtp();
     if (OTP_PENDING) {
       const form = document.getElementById("otpForm");
-      if (form) form.addEventListener("submit", submitAdminOtp);
+      if (form) { form.addEventListener("submit", submitAdminOtp); form.addEventListener("input", event => { OTP_CODE = event.target.value.replace(/\D/g, "").slice(0, 8); event.target.value = OTP_CODE; }); }
     }
   };
 
