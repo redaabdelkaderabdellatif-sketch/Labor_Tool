@@ -16,7 +16,7 @@
 
   const oldSyncModuleGate = syncModuleGate;
   syncModuleGate = function () {
-    if (STATE.password && ((STATE.role === "admin" && STATE.adminToken) || STATE.role === "app_user")) {
+    if ((STATE.role === "admin" && STATE.adminToken) || (STATE.role === "app_user" && STATE.password)) {
       localStorage.setItem("gaty_apps_gate", String(Date.now()));
       localStorage.setItem("gaty_apps_scope", JSON.stringify(allowed()));
     } else {
