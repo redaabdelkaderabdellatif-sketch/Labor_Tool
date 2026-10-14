@@ -239,7 +239,7 @@ async function submitAdminOtp(event) {
 
   const oldSelectModuleTab = selectModuleTab;
   selectModuleTab = function (name) {
-    if (STATE.role === "admin") return oldSelectModuleTab(name);
+    if (STATE.role === "admin") { const savedPassword = STATE.password; STATE.password = "__admin_session__"; try { return oldSelectModuleTab(name); } finally { STATE.password = savedPassword; } }
     if (!STATE.password || !canOpen(name)) return;
     STATE.section = "module:" + name;
     syncModuleGate();
