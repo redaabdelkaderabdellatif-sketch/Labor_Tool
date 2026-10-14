@@ -16,7 +16,7 @@
 
   const oldSyncModuleGate = syncModuleGate;
   syncModuleGate = function () {
-    if (STATE.password && (STATE.role === "admin" || STATE.role === "app_user")) {
+    if (STATE.password && ((STATE.role === "admin" && STATE.adminToken) || STATE.role === "app_user")) {
       localStorage.setItem("gaty_apps_gate", String(Date.now()));
       localStorage.setItem("gaty_apps_scope", JSON.stringify(allowed()));
     } else {
@@ -26,7 +26,7 @@
   };
   const oldSaveLocal = saveLocal;
   saveLocal = function () {
-    if (STATE.role === "app_user") {
+    if (STATE.role === "admin" || STATE.role === "app_user") {
       localStorage.removeItem("warsha_pw3");
       syncModuleGate();
       return;
@@ -48,8 +48,38 @@
   USER_INPUT = "";
   STATE.allowedModules = [];
   STATE.username = "";
+  STATE.adminToken = "";
+  let OTP_PENDING = false;
+  let OTP_CODE = "";
+  let OTP_BUSY = false;
+
+  // Admin requests carry the short-lived server token. Other roles keep the
+  // existing password-based flow unchanged.
+  const oldApiCall = apiCall;
+  apiCall = function (action, data) {
+    const payload = { ...(data || {}) };
+    if (STATE.role === "admin" && STATE.adminToken) payload.adminToken = STATE.adminToken;
+    return oldApiCall(action, payload);
+  };
+
+  const oldModuleAccessApi = moduleAccessApi;
+  moduleAccessApi = async function (action, data) {
+    const payload = { ...(data || {}) };
+    if (STATE.role === "admin" && STATE.adminToken) payload.adminToken = STATE.adminToken;
+    return oldModuleAccessApi(action, payload);
+  };
+
   const oldAuthScreen = renderAuthScreen;
   renderAuthScreen = function () {
+    if (OTP_PENDING) {
+      const title = STATE.lang === "en" ? "Admin verification" : "تأكيد دخول الأدمن";
+      const hint = STATE.lang === "en" ? "Enter the verification code sent to your email." : "اكتب رمز التحقق المرسل إلى بريدك الإلكتروني.";
+      const codeLabel = STATE.lang === "en" ? "Verification code" : "رمز التحقق";
+      const verifyLabel = STATE.lang === "en" ? "Verify and sign in" : "تحقق وسجّل الدخول";
+      const resendLabel = STATE.lang === "en" ? "Send a new code" : "إرسال رمز جديد";
+      const backLabel = STATE.lang === "en" ? "Back" : "رجوع";
+      return `<div class="header"><div class="header-inner"><div class="header-left"><h1 class="title">${esc(appName())}</h1></div>${langSwitcherHtml()}</div></div><div class="auth-wrap"><div class="auth-card"><h2 class="auth-title">${title}</h2><p style="text-align:center;color:var(--muted);margin:0 0 14px;">${hint}</p>${STATE.authError ? `<div class="error-banner" style="margin:0 0 14px;">${esc(STATE.authError)}</div>` : ""}<form id="otpForm"><input type="text" inputmode="numeric" autocomplete="one-time-code" class="input" style="text-align:center;font-size:18px;letter-spacing:5px;margin-bottom:14px;" placeholder="${codeLabel}" value="${esc(OTP_CODE)}" oninput="OTP_CODE=this.value.replace(/\\D/g,'').slice(0,8)" required><button type="submit" class="submit-btn" ${OTP_BUSY ? "disabled" : ""}>${OTP_BUSY ? (STATE.lang === "en" ? "Verifying..." : "جارٍ التحقق...") : verifyLabel}</button></form><div style="display:flex;justify-content:center;gap:12px;margin-top:12px;"><button type="button" class="logout-btn" onclick="resendAdminOtp()" ${OTP_BUSY ? "disabled" : ""}>${resendLabel}</button><button type="button" class="logout-btn" onclick="cancelAdminOtp()">${backLabel}</button></div></div></div>`;
+    }
     const html = oldAuthScreen();
     return html.replace('<form id="pwForm">', '<form id="pwForm"><input type="text" class="input" style="text-align:center;font-size:16px;margin-bottom:10px;" placeholder="اسم المستخدم (اتركه فارغًا لحسابات النظام)" value="' + esc(USER_INPUT) + '" oninput="USER_INPUT=this.value">');
   };
@@ -63,8 +93,26 @@
       const data = USER_INPUT.trim()
         ? await moduleAccessApi("getData", { password: PW_INPUT, username: USER_INPUT.trim() })
         : await apiCall("getData", { password: PW_INPUT });
+      // The server deliberately rejects a password-only admin getData call.
+      // Probe the OTP endpoint after that rejection; it sends mail only when
+      // the password matches the configured admin password.
+      if (!USER_INPUT.trim() && !data.ok) {
+        const started = await apiCall("startAdminOtp", { password: PW_INPUT });
+        if (!started.ok) {
+          STATE.authError = started.error || t("connectionError");
+          if (btn) { btn.disabled = false; btn.innerText = t("loginBtn"); }
+          render();
+          return;
+        }
+        OTP_PENDING = true;
+        OTP_CODE = "";
+        STATE.authError = "";
+        if (btn) { btn.disabled = false; btn.innerText = t("loginBtn"); }
+        render();
+        return;
+      }
       if (!data.ok) {
-        STATE.authError = t("wrongPassword");
+        STATE.authError = data.adminPasswordInvalid ? t("wrongPassword") : (data.error || t("wrongPassword"));
         if (btn) { btn.disabled = false; btn.innerText = t("loginBtn"); }
         render();
         return;
@@ -72,6 +120,13 @@
       STATE.password = PW_INPUT;
       STATE.username = USER_INPUT.trim();
       applyLoginData(data);
+      if (STATE.role === "admin") {
+        STATE.authError = STATE.lang === "en" ? "Admin verification is required. Sign in again to request a code." : "دخول الأدمن يحتاج رمز تحقق. سجّل الدخول مرة أخرى لطلب الرمز.";
+        STATE.password = "";
+        STATE.role = null;
+        render();
+        return;
+      }
       saveLocal();
       saveCache();
       render();
@@ -79,6 +134,86 @@
       STATE.authError = t("connectionError");
       if (btn) { btn.disabled = false; btn.innerText = t("loginBtn"); }
       render();
+    }
+  };
+
+  async function finishAdminLogin(result) {
+    if (!result || !result.ok) throw new Error((result && result.error) || "Invalid verification code");
+    STATE.adminToken = result.adminToken || result.token || "";
+    if (!STATE.adminToken) throw new Error("The server did not return an admin session token");
+    const data = await apiCall("getData", { adminToken: STATE.adminToken });
+    if (!data.ok || data.role !== "admin") throw new Error(data.error || "Admin session could not be loaded");
+    STATE.password = "";
+    applyLoginData(data);
+    STATE.adminToken = result.adminToken || result.token;
+    OTP_PENDING = false;
+    OTP_CODE = "";
+    PW_INPUT = "";
+    USER_INPUT = "";
+    saveLocal();
+    saveCache();
+    render();
+  }
+
+  async function submitAdminOtp(event) {
+    event.preventDefault();
+    if (!OTP_CODE.trim() || OTP_BUSY) return;
+    OTP_BUSY = true;
+    STATE.authError = "";
+    render();
+    try {
+      const code = OTP_CODE.trim();
+      const result = await apiCall("verifyAdminOtp", { password: PW_INPUT, code, otp: code });
+      await finishAdminLogin(result);
+    } catch (error) {
+      OTP_BUSY = false;
+      STATE.authError = error.message || t("connectionError");
+      render();
+    }
+  }
+
+  resendAdminOtp = async function () {
+    if (OTP_BUSY) return;
+    OTP_BUSY = true;
+    STATE.authError = "";
+    render();
+    try {
+      const result = await apiCall("startAdminOtp", { password: PW_INPUT });
+      if (!result.ok) throw new Error(result.error || t("connectionError"));
+      OTP_CODE = "";
+      STATE.authError = STATE.lang === "en" ? "A new code was sent." : "تم إرسال رمز جديد.";
+    } catch (error) {
+      STATE.authError = error.message || t("connectionError");
+    }
+    OTP_BUSY = false;
+    render();
+  };
+
+  cancelAdminOtp = function () {
+    OTP_PENDING = false;
+    OTP_CODE = "";
+    OTP_BUSY = false;
+    PW_INPUT = "";
+    STATE.authError = "";
+    render();
+  };
+
+  logout = (function (oldLogout) {
+    return function () {
+      STATE.adminToken = "";
+      OTP_PENDING = false;
+      OTP_CODE = "";
+      OTP_BUSY = false;
+      oldLogout();
+    };
+  })(logout);
+
+  const oldRenderOtp = render;
+  render = function () {
+    oldRenderOtp();
+    if (OTP_PENDING) {
+      const form = document.getElementById("otpForm");
+      if (form) form.addEventListener("submit", submitAdminOtp);
     }
   };
 
@@ -199,9 +334,18 @@
   }
   const oldBoot = boot;
   boot = async function () {
+    const cache = loadCache();
+    if (cache && cache.role === "admin") clearLocal();
     await oldBoot();
+    if (STATE.role === "admin") {
+      clearLocal();
+      STATE.password = "";
+      STATE.role = null;
+      STATE.loading = false;
+      STATE.authError = "";
+    }
     syncModuleGate();
+    render();
   };
   render();
 })();
-
