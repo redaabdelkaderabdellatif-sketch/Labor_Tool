@@ -289,7 +289,7 @@ async function submitAdminOtp(event) {
   };
   const oldRender = render;
   render = function () {
-    if (STATE.booted && STATE.role === "app_user" && !STATE.section && !STATE.loading) {
+    if (STATE.role === "admin" && STATE.adminToken) { const savedPassword = STATE.password; STATE.password = "__admin_session__"; try { oldRender(); } finally { STATE.password = savedPassword; } return; } if (STATE.booted && STATE.role === "app_user" && !STATE.section && !STATE.loading) {
       document.getElementById("app").innerHTML = renderDashboardScreen();
       return;
     }
