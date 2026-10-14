@@ -78,7 +78,7 @@
       const verifyLabel = STATE.lang === "en" ? "Verify and sign in" : "تحقق وسجّل الدخول";
       const resendLabel = STATE.lang === "en" ? "Send a new code" : "إرسال رمز جديد";
       const backLabel = STATE.lang === "en" ? "Back" : "رجوع";
-      return `<div class="header"><div class="header-inner"><div class="header-left"><h1 class="title">${esc(appName())}</h1></div>${langSwitcherHtml()}</div></div><div class="auth-wrap"><div class="auth-card"><h2 class="auth-title">${title}</h2><p style="text-align:center;color:var(--muted);margin:0 0 14px;">${hint}</p>${STATE.authError ? `<div class="error-banner" style="margin:0 0 14px;">${esc(STATE.authError)}</div>` : ""}<form id="otpForm"><input type="text" inputmode="numeric" autocomplete="one-time-code" class="input" style="text-align:center;font-size:18px;letter-spacing:5px;margin-bottom:14px;" placeholder="${codeLabel}" value="${esc(OTP_CODE)}" oninput="OTP_CODE=this.value.replace(/\\D/g,'').slice(0,8)" required><button type="submit" class="submit-btn" ${OTP_BUSY ? "disabled" : ""}>${OTP_BUSY ? (STATE.lang === "en" ? "Verifying..." : "جارٍ التحقق...") : verifyLabel}</button></form><div style="display:flex;justify-content:center;gap:12px;margin-top:12px;"><button type="button" class="logout-btn" onclick="resendAdminOtp()" ${OTP_BUSY ? "disabled" : ""}>${resendLabel}</button><button type="button" class="logout-btn" onclick="cancelAdminOtp()">${backLabel}</button></div></div></div>`;
+        return `<div class="header"><div class="header-inner"><div class="header-left"><h1 class="title">${esc(appName())}</h1></div>${langSwitcherHtml()}</div></div><div class="auth-wrap"><div class="auth-card"><h2 class="auth-title">${title}</h2><p style="text-align:center;color:var(--muted);margin:0 0 14px;">${hint}</p>${STATE.authError ? `<div class="error-banner" style="margin:0 0 14px;">${esc(STATE.authError)}</div>` : ""}<form id="otpForm"><input id="otpCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code" class="input" style="text-align:center;font-size:18px;letter-spacing:5px;margin-bottom:14px;" placeholder="${codeLabel}" value="${esc(OTP_CODE)}" required><button type="submit" class="submit-btn" ${OTP_BUSY ? "disabled" : ""}>${OTP_BUSY ? (STATE.lang === "en" ? "Verifying..." : "جارٍ التحقق...") : verifyLabel}</button></form><div style="display:flex;justify-content:center;gap:12px;margin-top:12px;"><button type="button" class="logout-btn" onclick="resendAdminOtp()" ${OTP_BUSY ? "disabled" : ""}>${resendLabel}</button><button type="button" class="logout-btn" onclick="cancelAdminOtp()">${backLabel}</button></div></div></div>`;
     }
     const html = oldAuthScreen();
     return html.replace('<form id="pwForm">', '<form id="pwForm"><input type="text" class="input" style="text-align:center;font-size:16px;margin-bottom:10px;" placeholder="البريد الإلكتروني للأدمن أو اسم المستخدم" value="' + esc(USER_INPUT) + '" oninput="USER_INPUT=this.value">');
@@ -90,14 +90,9 @@
     const btn = document.getElementById("pwSubmitBtn");
     if (btn) { btn.disabled = true; btn.innerText = t("loggingIn"); }
     try {
-      const data = USER_INPUT.trim().includes("@") ? await apiCall("startAdminOtp", { password: PW_INPUT, email: USER_INPUT.trim() }) : USER_INPUT.trim()
-        ? await moduleAccessApi("getData", { password: PW_INPUT, username: USER_INPUT.trim() })
-        : await apiCall("getData", { password: PW_INPUT });
-      // The server deliberately rejects a password-only admin getData call.
-      // Probe the OTP endpoint after that rejection; it sends mail only when
-      // the password matches the configured admin password.
-      if (USER_INPUT.trim().includes("@") ? data.ok : (!USER_INPUT.trim() && !data.ok)) {
-        const started = USER_INPUT.trim().includes("@") ? data : await apiCall("startAdminOtp", { password: PW_INPUT, email: USER_INPUT.trim() });
+      const loginId = USER_INPUT.trim();
+      if (loginId.includes("@")) {
+        const started = await apiCall("startAdminOtp", { password: PW_INPUT, email: loginId });
         if (!started.ok) {
           STATE.authError = started.error || t("connectionError");
           if (btn) { btn.disabled = false; btn.innerText = t("loginBtn"); }
@@ -111,8 +106,13 @@
         render();
         return;
       }
+      const data = loginId
+        ? await moduleAccessApi("getData", { password: PW_INPUT, username: loginId })
+        : await apiCall("getData", { password: PW_INPUT });
       if (!data.ok) {
-        STATE.authError = data.adminPasswordInvalid ? t("wrongPassword") : (data.error || t("wrongPassword"));
+        STATE.authError = !loginId && data.adminPasswordInvalid
+          ? "اكتب البريد الإلكتروني للأدمن مع كلمة المرور"
+          : (data.error || t("wrongPassword"));
         if (btn) { btn.disabled = false; btn.innerText = t("loginBtn"); }
         render();
         return;
@@ -155,15 +155,7 @@
     render();
   }
 
-    // Catch OTP submits before the recreated form can trigger native navigation.
-  document.addEventListener("submit", event => {
-    if (!event.target || event.target.id !== "otpForm") return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    submitAdminOtp(event);
-  }, true);
-
-async function submitAdminOtp(event) {
+  async function submitAdminOtp(event) {
     event.preventDefault();
     if (!OTP_CODE.trim() || OTP_BUSY) return;
     OTP_BUSY = true;
@@ -179,6 +171,16 @@ async function submitAdminOtp(event) {
       render();
     }
   }
+
+  // The OTP form is re-created every render. Delegate its submit event so a
+  // freshly rendered form can never fall through to native navigation.
+  document.addEventListener("submit", event => {
+    if (event.target && event.target.id === "otpForm") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      submitAdminOtp(event);
+    }
+  }, true);
 
   resendAdminOtp = async function () {
     if (OTP_BUSY) return;
@@ -217,12 +219,15 @@ async function submitAdminOtp(event) {
   })(logout);
 
   const oldRenderOtp = render;
-
   render = function () {
     oldRenderOtp();
     if (OTP_PENDING) {
       const form = document.getElementById("otpForm");
-      if (form) { form.addEventListener("submit", submitAdminOtp); form.addEventListener("input", event => { OTP_CODE = event.target.value.replace(/\D/g, "").slice(0, 8); event.target.value = OTP_CODE; }); }
+      const codeInput = document.getElementById("otpCodeInput");
+      if (codeInput) codeInput.addEventListener("input", () => {
+        OTP_CODE = codeInput.value.replace(/\D/g, "").slice(0, 8);
+        codeInput.value = OTP_CODE;
+      });
     }
   };
 
@@ -239,7 +244,7 @@ async function submitAdminOtp(event) {
 
   const oldSelectModuleTab = selectModuleTab;
   selectModuleTab = function (name) {
-    if (STATE.role === "admin") { const savedPassword = STATE.password; STATE.password = "__admin_session__"; try { return oldSelectModuleTab(name); } finally { STATE.password = savedPassword; } }
+    if (STATE.role === "admin") return oldSelectModuleTab(name);
     if (!STATE.password || !canOpen(name)) return;
     STATE.section = "module:" + name;
     syncModuleGate();
@@ -261,6 +266,106 @@ async function submitAdminOtp(event) {
     const rows = users.map(u => `<li class="list-item"><span>${esc(u.name || u.username)} <small>(${esc(u.username)}) · ${u.active === false ? "معطل" : "فعال"}</small></span><span class="list-item-actions"><button class="small-edit" onclick="toggleModuleUser('${esc(u.id)}',${u.active === false ? "true" : "false"})">${u.active === false ? "تفعيل" : "تعطيل"}</button><button class="small-delete" onclick="revokeModuleUser('${esc(u.id)}','${moduleId}')">إزالة من التبويب</button></span></li>`).join("");
     return `<section class="card" style="margin:12px 0;"><h2 class="card-title">إدارة دخول ${esc(moduleNames[moduleId] || moduleId)}</h2><p style="color:var(--muted);margin:0 0 10px;">أضف مستخدمًا لهذا التبويب فقط. يمكن تكرار اسم المستخدم في تبويب آخر لإضافة صلاحية أخرى.</p>${STATE.error ? `<div class="error-banner">${esc(STATE.error)}</div>` : ""}<ul class="list">${rows || '<li class="list-item">لا يوجد مستخدمون لهذا التبويب</li>'}</ul><div class="grid2" style="margin-top:12px;"><input class="input" id="accessUsername" placeholder="اسم المستخدم"><input class="input" id="accessName" placeholder="الاسم الظاهر"><input class="input" type="password" id="accessPassword" placeholder="كلمة المرور (4 أحرف على الأقل)"></div><button class="add-btn" style="width:100%;margin-top:10px;" onclick="saveModuleUser('${moduleId}')">حفظ صلاحية التبويب</button></section>`;
   }
+
+  function renderUserManagement() {
+    if (STATE.role !== "admin") return "";
+    const users = STATE.settings.appUsers || [];
+    const permissionChecks = (user, prefix) => MODULES.map(([id, en, ar]) => `
+      <label style="display:inline-flex;align-items:center;gap:5px;margin:4px 10px 4px 0;">
+        <input type="checkbox" id="${prefix}-${id}" ${((user.allowedModules || []).includes(id)) ? "checked" : ""}>
+        ${esc(STATE.lang === "en" ? en : ar)}
+      </label>`).join("");
+    const cards = users.map(user => {
+      const id = esc(user.id);
+      const prefix = "user-module-" + id;
+      return `<article class="card" style="margin:10px 0;padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div><strong>${esc(user.name || user.username)}</strong> <small>(${esc(user.username)}) · ${user.active === false ? "معطل" : "فعال"}</small></div>
+          <div class="list-item-actions">
+            <button class="small-edit" type="button" onclick="toggleModuleUser('${id}',${user.active === false ? "true" : "false"})">${user.active === false ? "تفعيل" : "تعطيل"}</button>
+            <button class="small-delete" type="button" onclick="removeAppUser('${id}')">حذف المستخدم</button>
+          </div>
+        </div>
+        <div style="margin:10px 0;">${permissionChecks(user, prefix)}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input class="input" id="user-password-${id}" type="password" autocomplete="new-password" placeholder="اتركه فارغًا للإبقاء على كلمة المرور" style="flex:1;min-width:230px;">
+          <button class="add-btn" type="button" onclick="saveManagedUser('${id}')">حفظ الصلاحيات / كلمة المرور</button>
+        </div>
+      </article>`;
+    }).join("");
+    const newChecks = MODULES.map(([id, en, ar]) => `
+      <label style="display:inline-flex;align-items:center;gap:5px;margin:4px 10px 4px 0;">
+        <input type="checkbox" id="new-user-module-${id}">
+        ${esc(STATE.lang === "en" ? en : ar)}
+      </label>`).join("");
+    return `<section class="card" style="max-width:1100px;margin:18px auto;padding:18px;">
+      <h2 class="card-title">إدارة المستخدمين وصلاحيات التبويبات</h2>
+      <p style="color:var(--muted);margin:0 0 12px;">أنشئ حسابًا واحدًا لكل شخص وحدد كل التبويبات التي يمكنه فتحها. تغيير كلمة المرور اختياري عند تعديل مستخدم موجود.</p>
+      ${STATE.error ? `<div class="error-banner">${esc(STATE.error)}</div>` : ""}
+      ${cards || '<div class="list-item">لا يوجد مستخدمون مضافون حتى الآن</div>'}
+      <article class="card" style="margin:14px 0 0;padding:14px;background:var(--surface-soft, #faf9fb);">
+        <h3 style="margin:0 0 10px;">إضافة مستخدم</h3>
+        <div class="grid2">
+          <input class="input" id="newAppUsername" autocomplete="off" placeholder="اسم المستخدم">
+          <input class="input" id="newAppName" autocomplete="off" placeholder="الاسم الظاهر">
+          <input class="input" id="newAppPassword" type="password" autocomplete="new-password" placeholder="كلمة المرور (8 أحرف على الأقل)">
+        </div>
+        <div style="margin:10px 0;">${newChecks}</div>
+        <button class="add-btn" type="button" onclick="createManagedUser()">إضافة المستخدم وحفظ الصلاحيات</button>
+      </article>
+    </section>`;
+  }
+
+  saveManagedUser = async function (id) {
+    const users = (STATE.settings.appUsers || []).map(u => ({ ...u, allowedModules: [...(u.allowedModules || [])] }));
+    const user = users.find(u => u.id === id);
+    if (!user) return;
+    const prefix = "user-module-" + id + "-";
+    user.allowedModules = MODULES.filter(([moduleId]) => document.getElementById(prefix + moduleId)?.checked).map(([moduleId]) => moduleId);
+    const passwordInput = document.getElementById("user-password-" + id);
+    const password = passwordInput ? passwordInput.value : "";
+    if (password && password.length < 8) { alert("كلمة المرور يجب أن تكون 8 أحرف على الأقل"); return; }
+    if (!user.allowedModules.length) {
+      if (!confirm("لم يتم تحديد أي تبويب. سيُحذف المستخدم وتُلغى كل صلاحياته. هل تريد المتابعة؟")) return;
+      await saveModuleUsers(users.filter(u => u.id !== id));
+      return;
+    }
+    if (password) user.password = password;
+    const saved = await saveModuleUsers(users);
+    if (saved && passwordInput) passwordInput.value = "";
+  };
+
+  createManagedUser = async function () {
+    const usernameInput = document.getElementById("newAppUsername");
+    const nameInput = document.getElementById("newAppName");
+    const passwordInput = document.getElementById("newAppPassword");
+    const username = usernameInput.value.trim();
+    const name = nameInput.value.trim() || username;
+    const password = passwordInput.value;
+    const allowedModules = MODULES.filter(([id]) => document.getElementById("new-user-module-" + id)?.checked).map(([id]) => id);
+    if (!username || password.length < 8 || !allowedModules.length) {
+      alert("أدخل اسم المستخدم وكلمة مرور من 8 أحرف على الأقل، وحدد تبويبًا واحدًا على الأقل.");
+      return;
+    }
+    const users = (STATE.settings.appUsers || []).map(u => ({ ...u, allowedModules: [...(u.allowedModules || [])] }));
+    if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+      alert("اسم المستخدم مستخدم بالفعل. اختر اسمًا آخر.");
+      return;
+    }
+    users.push({ id: crypto.randomUUID(), username, name, password, allowedModules, active: true });
+    if (await saveModuleUsers(users)) {
+      usernameInput.value = "";
+      nameInput.value = "";
+      passwordInput.value = "";
+    }
+  };
+
+  removeAppUser = async function (id) {
+    const user = (STATE.settings.appUsers || []).find(u => u.id === id);
+    if (!user || !confirm("سيتم حذف المستخدم وإلغاء كل صلاحياته. هل تريد المتابعة؟")) return;
+    const users = (STATE.settings.appUsers || []).filter(u => u.id !== id).map(u => ({ ...u, allowedModules: [...(u.allowedModules || [])] }));
+    await saveModuleUsers(users);
+  };
 
   const oldRenderModuleScreen = renderModuleScreen;
   renderModuleScreen = function () {
@@ -284,12 +389,16 @@ async function submitAdminOtp(event) {
   };
   const oldDashboard = renderDashboardScreen;
   renderDashboardScreen = function () {
+    if (STATE.role === "admin") {
+      const html = oldDashboard();
+      return html.includes("</main>") ? html.replace("</main>", renderUserManagement() + "</main>") : html + renderUserManagement();
+    }
     if (STATE.role !== "app_user") return oldDashboard();
     return `<div class="header"><div class="header-inner"><div class="header-left"><h1 class="title">${esc(appName())}</h1><span>${esc(STATE.name)}</span></div><div style="display:flex;align-items:center;gap:10px;">${langSwitcherHtml()}<button class="logout-btn" onclick="logout()">${t("logoutBtn")}</button></div></div></div><main>${moduleTabsHtml("")}<div class="card" style="max-width:700px;margin:28px auto;text-align:center;padding:36px 20px;"><h2 class="card-title">${STATE.lang === "en" ? "Your authorized tabs" : "التبويبات المسموح بها"}</h2><p style="color:var(--muted);">${STATE.lang === "en" ? "Choose an authorized tab above." : "اختر أحد التبويبات المسموح بها أعلاه."}</p></div></main>`;
   };
   const oldRender = render;
   render = function () {
-    if (STATE.role === "admin" && STATE.adminToken) { const savedPassword = STATE.password; STATE.password = "__admin_session__"; try { oldRender(); } finally { STATE.password = savedPassword; } return; } if (STATE.booted && STATE.role === "app_user" && !STATE.section && !STATE.loading) {
+    if (STATE.booted && STATE.role === "app_user" && !STATE.section && !STATE.loading) {
       document.getElementById("app").innerHTML = renderDashboardScreen();
       return;
     }
@@ -319,6 +428,7 @@ async function submitAdminOtp(event) {
   };
   async function saveModuleUsers(users) {
     STATE.error = "";
+    const previousUsers = (STATE.settings.appUsers || []).map(u => ({ ...u, allowedModules: [...(u.allowedModules || [])] }));
     const settings = { ...STATE.settings, appUsers: users };
     STATE.settings = settings;
     render();
@@ -328,10 +438,12 @@ async function submitAdminOtp(event) {
       STATE.settings.appUsers = users.map(({ password, ...u }) => u);
       saveCache();
       render();
+      return true;
     } catch (error) {
-      STATE.settings.appUsers = users.map(({ password, ...u }) => u);
+      STATE.settings.appUsers = previousUsers;
       STATE.error = t("settingsSaveFailed");
       render();
+      return false;
     }
   }
 
@@ -358,3 +470,4 @@ async function submitAdminOtp(event) {
   };
   render();
 })();
+
