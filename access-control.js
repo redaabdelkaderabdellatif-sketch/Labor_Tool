@@ -398,11 +398,20 @@
   };
   const oldRender = render;
   render = function () {
-    if (STATE.booted && STATE.role === "app_user" && !STATE.section && !STATE.loading) {
-      document.getElementById("app").innerHTML = renderDashboardScreen();
-      return;
+    // The legacy renderer treats an empty password as logged out. Admins use
+    // a short-lived server token instead of retaining their password, so use
+    // a render-only sentinel while building the authenticated admin screen.
+    const renderAdminSession = STATE.role === "admin" && Boolean(STATE.adminToken) && !STATE.password;
+    if (renderAdminSession) STATE.password = "__admin_session__";
+    try {
+      if (STATE.booted && STATE.role === "app_user" && !STATE.section && !STATE.loading) {
+        document.getElementById("app").innerHTML = renderDashboardScreen();
+        return;
+      }
+      oldRender();
+    } finally {
+      if (renderAdminSession) STATE.password = "";
     }
-    oldRender();
   };
 
   saveModuleUser = async function (moduleId) {
