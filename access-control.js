@@ -220,7 +220,16 @@
 
   const oldRenderOtp = render;
   render = function () {
-    oldRenderOtp();
+    // The legacy renderer requires STATE.password to be truthy. Admin login
+    // intentionally clears it after OTP, so provide a render-only sentinel
+    // while the server-issued admin token is valid.
+    const renderAsAdmin = STATE.role === "admin" && !!STATE.adminToken && !STATE.password;
+    if (renderAsAdmin) STATE.password = "__admin_session_render_only__";
+    try {
+      oldRenderOtp();
+    } finally {
+      if (renderAsAdmin) STATE.password = "";
+    }
     if (OTP_PENDING) {
       const form = document.getElementById("otpForm");
       const codeInput = document.getElementById("otpCodeInput");
