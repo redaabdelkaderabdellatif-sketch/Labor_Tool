@@ -253,7 +253,19 @@
 
   const oldSelectModuleTab = selectModuleTab;
   selectModuleTab = function (name) {
-    if (STATE.role === "admin") return oldSelectModuleTab(name);
+    if (STATE.role === "admin") {
+      // Admin sessions authenticate with adminToken; the password is cleared
+      // after OTP, so the legacy navigation guard must not require it.
+      if (!STATE.adminToken) return;
+      if (name === "labor") { STATE.section = "labor"; render(); return; }
+      if (name === "raw") { STATE.section = "raw"; render(); return; }
+      if (name === "home") { STATE.section = null; render(); return; }
+      if (name === "new-system") name = "accounting";
+      syncModuleGate();
+      STATE.section = "module:" + name;
+      render();
+      return;
+    }
     if (!STATE.password || !canOpen(name)) return;
     STATE.section = "module:" + name;
     syncModuleGate();
