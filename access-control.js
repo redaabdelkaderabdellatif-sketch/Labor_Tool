@@ -591,3 +591,144 @@
     }
   };
 })();
+
+// Add document dates to the Inventory Cost transfer output without changing its calculations.
+(function () {
+  const costDoc = GATY_MODULE_DOCS && GATY_MODULE_DOCS.cost;
+  if (typeof costDoc !== "string" || costDoc.includes('id="cost-document-date-patch"')) return;
+  const markers = ["<th>Doc No.</th>", "      <td>${item.doc}</td>
+      <td>${item.ref}</td>", "const headers = ['رقم المستند', 'رقم المرجع'", "    item.doc,
+    item.ref,"];
+  if (!markers.every(marker => costDoc.includes(marker))) {
+    console.warn("Inventory Cost date patch skipped: expected source markup was not found.");
+    return;
+  }
+  let updated = costDoc
+    .replace(markers[0], "<th>Doc No.</th><th>Document Date</th>")
+    .replace(markers[1], "      <td>${item.doc}</td>
+      <td>${formatInventoryCostDocumentDate(item.documentDate)}</td>
+      <td>${item.ref}</td>")
+    .replace(markers[2], "const headers = ['رقم المستند', 'تاريخ المستند', 'رقم المرجع'")
+    .replace(markers[3], "    item.doc,
+    item.documentDate,
+    item.ref,");
+  const patchScript = `<script id="cost-document-date-patch">
+(function () {
+  function formatInventoryCostDocumentDate(value) {
+    if (value instanceof Date && !isNaN(value)) return value.getFullYear() + "-" + String(value.getMonth() + 1).padStart(2, "0") + "-" + String(value.getDate()).padStart(2, "0");
+    if (typeof value === "number" && window.XLSX && XLSX.SSF) {
+      const date = XLSX.SSF.parse_date_code(value);
+      if (date) return date.y + "-" + String(date.m).padStart(2, "0") + "-" + String(date.d).padStart(2, "0");
+    }
+    return String(value == null ? "" : value).trim();
+  }
+  const originalParseFile = parseFile;
+  parseFile = function (key, raw) {
+    const result = originalParseFile(key, raw);
+    let headerRowIndex = -1;
+    for (let i = 0; i < Math.min(10, raw.length); i++) {
+      if (raw[i] && raw[i].some(value => value != null && String(value).includes("رقم المستند"))) { headerRowIndex = i; break; }
+    }
+    const datesByDocument = new Map();
+    if (headerRowIndex !== -1) {
+      const dateColumn = (raw[headerRowIndex] || []).findIndex(value => value != null && /(date|تاريخ)/i.test(String(value)));
+      if (dateColumn !== -1) {
+        let currentDocument = null;
+        for (let i = headerRowIndex + 1; i < raw.length; i++) {
+          const row = raw[i] || [];
+          const documentNumber = String(row[0] || "").trim();
+          if (documentNumber.startsWith("0006") || documentNumber.startsWith("0005")) currentDocument = documentNumber;
+          const date = row[dateColumn];
+          if (currentDocument && date != null && String(date).trim() !== "") datesByDocument.set(currentDocument, date);
+        }
+      }
+    }
+    return { ...result, parsed: result.parsed.map(item => ({ ...item, documentDate: datesByDocument.get(item.doc) || null })) };
+  };
+  const originalDownloadResult = downloadResult;
+  downloadResult = function () {
+    originalDownloadResult.apply(this, arguments);
+    const table = document.querySelector("#result-card #preview-table");
+    if (table) {
+      const header = table.tHead && table.tHead.rows[0];
+      if (header && !Array.from(header.cells).some(cell => cell.textContent.trim() === "Document Date")) {
+        const th = document.createElement("th"); th.textContent = "Document Date";
+        header.insertBefore(th, header.cells[2] || null);
+      }
+      const rows = table.tBodies[0] ? Array.from(table.tBodies[0].rows) : [];
+      rows.forEach((row, index) => {
+        if (row.cells.length === 10) {
+          const td = document.createElement("td");
+          const item = state.result && state.result[index];
+          td.textContent = item ? formatInventoryCostDocumentDate(item.documentDate) : "";
+          row.insertBefore(td, row.cells[2] || null);
+        }
+      });
+    }
+  };
+  const originalDownload = downloadResult;
+  downloadResult = function () {
+    if (state.result) {
+      const workbook = XLSX.utils.book_new();
+      const headers = ["رقم المستند", "تاريخ المستند", "رقم المرجع", "تاريخ و رمز الصنف", "بيان الوارد من مخزن", "الكميات الصادرة", "الوحده", "السعر", "مجموع المبلغ", "رقم المرجع", "نوع الحركة"];
+      const data = state.result.map(item => [item.doc, item.documentDate, item.ref, item.code, item.desc, item.qty, item.unit, item.price, item.amount, item.ref, item.type === "return" ? "MATERIALS REFUND" : "TRANSFER"]);
+      const sheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+      sheet["!cols"] = [{wch:14},{wch:14},{wch:14},{wch:14},{wch:40},{wch:12},{wch:14},{wch:12},{wch:14},{wch:14},{wch:20}];
+      XLSX.utils.book_append_sheet(workbook, sheet, "قائمة تحويل المخزون");
+      const today = new Date().toISOString().split("T")[0];
+      XLSX.writeFile(workbook, "النهائي_" + today + ".xlsx");
+      log("File downloaded: النهائي_" + today + ".xlsx", "ok");
+    }
+  };
+})();
+</script>`;
+  updated = updated.replace("</body>", patchScript + "</body>");
+  GATY_MODULE_DOCS.cost = updated;
+})();
+
+// Fill the newly added date cells after the existing preview renderer has populated its rows.
+(function () {
+  const costDoc = GATY_MODULE_DOCS && GATY_MODULE_DOCS.cost;
+  if (typeof costDoc !== "string" || !costDoc.includes('id="cost-document-date-patch"') || costDoc.includes('id="cost-document-date-preview-patch"')) return;
+  const previewPatch = `<script id="cost-document-date-preview-patch">
+(function () {
+  const originalProcessFiles = processFiles;
+  processFiles = async function () {
+    await originalProcessFiles.apply(this, arguments);
+    const table = document.querySelector("#result-card #preview-table");
+    if (!table || !table.tBodies[0]) return;
+    const header = table.tHead && table.tHead.rows[0];
+    if (header && !Array.from(header.cells).some(cell => cell.textContent.trim() === "Document Date")) {
+      const th = document.createElement("th"); th.textContent = "Document Date";
+      header.insertBefore(th, header.cells[2] || null);
+    }
+    Array.from(table.tBodies[0].rows).forEach((row, index) => {
+      if (row.cells.length !== 9) return;
+      const item = state.result && state.result[index];
+      const value = item && item.documentDate;
+      let label = "";
+      if (value instanceof Date && !isNaN(value)) label = value.getFullYear() + "-" + String(value.getMonth() + 1).padStart(2, "0") + "-" + String(value.getDate()).padStart(2, "0");
+      else if (typeof value === "number" && XLSX.SSF) { const d = XLSX.SSF.parse_date_code(value); if (d) label = d.y + "-" + String(d.m).padStart(2, "0") + "-" + String(d.d).padStart(2, "0"); }
+      else label = String(value == null ? "" : value).trim();
+      const td = document.createElement("td"); td.textContent = label;
+      row.insertBefore(td, row.cells[2] || null);
+    });
+  };
+})();
+</script>`;
+  GATY_MODULE_DOCS.cost = costDoc.replace("</body>", previewPatch + "</body>");
+})();
+
+// Expose the date formatter globally for the Inventory Cost preview template.
+(function () {
+  const costDoc = GATY_MODULE_DOCS && GATY_MODULE_DOCS.cost;
+  if (typeof costDoc !== "string" || !costDoc.includes('id="cost-document-date-patch"') || costDoc.includes('id="cost-document-date-format-patch"')) return;
+  const formatterPatch = `<script id="cost-document-date-format-patch">
+window.formatInventoryCostDocumentDate = function (value) {
+  if (value instanceof Date && !isNaN(value)) return value.getFullYear() + "-" + String(value.getMonth() + 1).padStart(2, "0") + "-" + String(value.getDate()).padStart(2, "0");
+  if (typeof value === "number" && window.XLSX && XLSX.SSF) { const d = XLSX.SSF.parse_date_code(value); if (d) return d.y + "-" + String(d.m).padStart(2, "0") + "-" + String(d.d).padStart(2, "0"); }
+  return String(value == null ? "" : value).trim();
+};
+</script>`;
+  GATY_MODULE_DOCS.cost = costDoc.replace("</body>", formatterPatch + "</body>");
+})();
