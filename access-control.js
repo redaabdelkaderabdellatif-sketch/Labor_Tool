@@ -501,3 +501,58 @@
   render();
 })();
 
+
+
+// Cloudflare Turnstile client gate for admin OTP requests. The token is verified by Apps Script.
+(function () {
+  let token = "";
+  let loading = false;
+
+  function mountWidget() {
+    const container = document.getElementById("gaty-turnstile-widget");
+    if (!container || container.dataset.rendered) return;
+    if (!window.turnstile) {
+      if (loading) return;
+      loading = true;
+      const script = document.createElement("script");
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => { loading = false; mountWidget(); };
+      script.onerror = () => { loading = false; };
+      document.head.appendChild(script);
+      return;
+    }
+    container.dataset.rendered = "true";
+    token = "";
+    window.turnstile.render(container, {
+      sitekey: "0x4AAAAAAFXhONG3-lUA_PUY",
+      callback: value => { token = value; },
+      "expired-callback": () => { token = ""; },
+      "error-callback": () => { token = ""; }
+    });
+  }
+
+  const previousAuthScreen = renderAuthScreen;
+  renderAuthScreen = function () {
+    const html = previousAuthScreen();
+    if (!html.includes('id="pwForm"') && !html.includes('id="otpForm"')) return html;
+    return html.replace("</form>", '<div id="gaty-turnstile-widget" style="display:flex;justify-content:center;margin:12px 0;"></div></form>');
+  };
+
+  const previousApiCall = apiCall;
+  apiCall = function (action, data) {
+    if (action === "startAdminOtp") {
+      if (!token) return Promise.resolve({ ok: false, error: STATE.lang === "en" ? "Complete the security check first." : "أكمل التحقق الأمني أولًا." });
+      data = { ...(data || {}), turnstileToken: token };
+      token = "";
+    }
+    return previousApiCall(action, data);
+  };
+
+  const previousRender = render;
+  render = function () {
+    previousRender();
+    mountWidget();
+  };
+})();
