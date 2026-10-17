@@ -620,7 +620,7 @@
     "      }\n" +
     "    }\n" +
     "  }\n" +
-    "  return { ...result, parsed: result.parsed.map(item => ({ ...item, documentDate: datesByDocument.get(item.doc) || null })) };\n" +
+    "  return { ...result, items: result.items.map(item => ({ ...item, documentDate: datesByDocument.get(item.doc) || null })) };\n" +
     "};\n" +
     "const originalProcessFiles = processFiles;\n" +
     "processFiles = async function () {\n" +
