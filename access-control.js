@@ -556,3 +556,21 @@
     mountWidget();
   };
 })();
+(function () {
+  const previousRenderForReferenceCorrections = render;
+  render = function () {
+    const activeModule = String(STATE.section || "").startsWith("module:") ? String(STATE.section).slice(7) : "";
+    const originalCostDoc = GATY_MODULE_DOCS.cost;
+    if (STATE.role !== "admin" && activeModule === "cost" && typeof originalCostDoc === "string") {
+      GATY_MODULE_DOCS.cost = originalCostDoc.replace(
+        'id="uc-corrections-card"',
+        'id="uc-corrections-card" hidden'
+      );
+    }
+    try {
+      return previousRenderForReferenceCorrections();
+    } finally {
+      if (typeof originalCostDoc === "string") GATY_MODULE_DOCS.cost = originalCostDoc;
+    }
+  };
+})();
