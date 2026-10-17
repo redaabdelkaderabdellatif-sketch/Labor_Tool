@@ -574,3 +574,20 @@
     }
   };
 })();
+
+
+(function () {
+  const previousRenderWithoutWorkshop = render;
+  render = function () {
+    const originalCostDoc = GATY_MODULE_DOCS.cost;
+    if (typeof originalCostDoc === "string" && !originalCostDoc.includes("id=\"gaty-workshop-hidden\"")) {
+      const hideWorkshop = '<style id="gaty-workshop-hidden">body:has(#workshop-iframe) .card:has(+ .card > #workshop-iframe),body:has(#workshop-iframe) .card:has(> #workshop-iframe){display:none!important}</style>';
+      GATY_MODULE_DOCS.cost = originalCostDoc.replace("</head>", hideWorkshop + "</head>");
+    }
+    try {
+      return previousRenderWithoutWorkshop.apply(this, arguments);
+    } finally {
+      GATY_MODULE_DOCS.cost = originalCostDoc;
+    }
+  };
+})();
