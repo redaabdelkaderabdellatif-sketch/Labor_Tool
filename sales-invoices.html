@@ -75,7 +75,8 @@ fileInput.addEventListener("change",function(){if(fileInput.files[0])loadInvoice
 function text(v){if(v===null||v===undefined)return "";if(v instanceof Date&&!isNaN(v))return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");return String(v).trim()}
 function esc(v){return text(v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function headerNorm(v){return text(v).toLowerCase().replace(/[\s_\-\/]+/g," ").trim()}
-function findCol(row,terms){for(var i=0;i<row.length;i++){var h=headerNorm(row[i]);if(terms.some(function(t){return h===t||h.indexOf(t)>=0}))return i}return -1}
+function findCol(row,terms){var normalized=terms.map(headerNorm);for(var i=0;i<row.length;i++){if(normalized.indexOf(headerNorm(row[i]))>=0)return i}for(var j=0;j<row.length;j++){var h=headerNorm(row[j]);if(normalized.some(function(t){return t.length>=9&&h.indexOf(t)>=0}))return j}return -1}
+function findReferenceCol(row){var exact=["رقم المرجع","reference","reference number","reference no","ref no"].map(headerNorm);for(var i=0;i<row.length;i++)if(exact.indexOf(headerNorm(row[i]))>=0)return i;return findCol(row,["رقم المرجع","reference number","reference no","ref no"])}
 function hasValue(v){return v!==null&&v!==undefined&&text(v)!==""}
 function isInvoiceRow(row,refCol,invoiceCol){if(invoiceCol>=0)return hasValue(row[invoiceCol]);return row.some(function(v,i){return i!==refCol&&hasValue(v)})}
 function parseWorkbook(wb){
@@ -84,7 +85,7 @@ function parseWorkbook(wb){
     var raw=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:"",cellDates:true});
     var headerRow=-1,refCol=-1;
     for(var i=0;i<Math.min(30,raw.length);i++){
-      var c=findCol(raw[i],["رقم المرجع","reference number","reference no","reference"]);
+      var c=findReferenceCol(raw[i]);
       if(c>=0){headerRow=i;refCol=c;break}
     }
     if(headerRow<0)return;
@@ -139,10 +140,15 @@ document.getElementById("download").addEventListener("click",function(){
   invoiceSheets.forEach(function(s){
     var rows=s.rows.filter(function(r){return r.ref&&r.ref.indexOf("000")===0});
     if(!rows.length)return;
-    var aoa=[["رقم المرجع","رقم الفاتورة","رقم الطلب",...s.headers]];
-    rows.forEach(function(r){aoa.push([r.ref,r.invoice,r.order,...r.values])});
-    var ws=XLSX.utils.aoa_to_sheet(aoa);ws["!cols"]=aoa[0].map(function(_,i){return {wch:i<3?20:18}});
-    XLSX.utils.book_append_sheet(wb,ws,(s.name||"فواتير").slice(0,25)+"_فواتير");
+    rows.sort(function(a,b){return a.ref.localeCompare(b.ref,undefined,{numeric:true})});
+    var columns=[s.refCol];
+    if(s.invoiceCol>=0&&columns.indexOf(s.invoiceCol)<0)columns.push(s.invoiceCol);
+    if(s.orderCol>=0&&columns.indexOf(s.orderCol)<0)columns.push(s.orderCol);
+    for(var c=0;c<s.headers.length;c++)if(columns.indexOf(c)<0)columns.push(c);
+    var aoa=[columns.map(function(c){return s.headers[c]||"عمود "+(c+1)})];
+    rows.forEach(function(r){aoa.push(columns.map(function(c){return r.values[c]??""}))});
+    var ws=XLSX.utils.aoa_to_sheet(aoa);ws["!cols"]=aoa[0].map(function(_,i){return {wch:i<3?22:18}});
+    XLSX.utils.book_append_sheet(wb,ws,(s.name||"فواتير").slice(0,20)+"_فواتير");
     count+=rows.length;
   });
   if(!count){document.getElementById("downloadStatus").innerHTML='<span class="error">لا توجد فواتير بأرقام مرجع تبدأ بـ 000.</span>';return}
