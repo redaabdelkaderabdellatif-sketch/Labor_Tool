@@ -90,7 +90,7 @@ function parseWorkbook(wb){
     }
     if(headerRow<0)return;
     var headers=(raw[headerRow]||[]).map(function(v,i){return hasValue(v)?text(v):"عمود "+(i+1)});
-    var invoiceCol=findCol(raw[headerRow],["رقم الفاتورة","invoice number","invoice no","invoice #","invoice"]);
+    var invoiceCol=findCol(raw[headerRow],["رقم الفاتورة","رقم الفاتوره","invoice number","invoice no","invoice #","invoice"]);
     var orderCol=findCol(raw[headerRow],["رقم طلب البيع","رقم الطلب","sales order","order number","order no"]);
     var sheet={name:sheetName,headerRow:headerRow,headers:headers,refCol:refCol,invoiceCol:invoiceCol,orderCol:orderCol,rows:[]};
     for(var r=headerRow+1;r<raw.length;r++){
