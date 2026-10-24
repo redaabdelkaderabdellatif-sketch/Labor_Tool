@@ -73,6 +73,8 @@ th{background:#f3f1f4;position:sticky;top:0;z-index:1}
 </main>
 <script>
 var invoiceSheets=[], missingRows=[], allRows=[], headersBySheet={}, salesOrderRows=[];
+var savedReferenceCorrections=loadReferenceCorrections();
+var REFERENCE_CORRECTIONS_KEY="gaty_sales_invoice_reference_corrections_v1";
 var drop=document.getElementById("drop"), fileInput=document.getElementById("file"), orderDrop=document.getElementById("orderDrop"), orderFileInput=document.getElementById("orderFile");
 drop.addEventListener("click",function(){fileInput.click()});
 drop.addEventListener("dragover",function(e){e.preventDefault();drop.classList.add("drag")});
@@ -101,6 +103,17 @@ function amountValue(v){
   var n=Number(cleaned);return isFinite(n)?n:NaN;
 }
 function amountKey(v){var n=amountValue(v);return isFinite(n)?Math.round(n*100):null}
+function loadReferenceCorrections(){try{return JSON.parse(localStorage.getItem("gaty_sales_invoice_reference_corrections_v1")||"{}")||{}}catch(e){return {}}}
+function referenceCorrectionKey(r,sh){
+  if(!r||!sh||sh.customerCol<0||sh.amountCol<0||!r.invoice)return "";
+  var customer=normalizeCustomer(r.values[sh.customerCol]), amount=amountKey(r.values[sh.amountCol]);
+  return customer&&amount!==null?JSON.stringify([r.invoice,customer,amount]):"";
+}
+function saveReferenceCorrection(r,sh){
+  var key=referenceCorrectionKey(r,sh);if(!key)return;
+  if(r.ref&&r.ref.indexOf("000")===0)savedReferenceCorrections[key]=r.ref;else delete savedReferenceCorrections[key];
+  try{localStorage.setItem("gaty_sales_invoice_reference_corrections_v1",JSON.stringify(savedReferenceCorrections))}catch(e){}
+}
 function parseSalesOrderWorkbook(wb){
   var parsed=[];
   wb.SheetNames.forEach(function(sheetName){
@@ -131,9 +144,13 @@ function matchMissingReferences(){
     if(sh.customerCol<0||sh.amountCol<0){r.matchNote="أعمدة العميل أو مبلغ الفاتورة غير موجودة";unmatched++;return}
     var customer=normalizeCustomer(r.values[sh.customerCol]), amount=amountKey(r.values[sh.amountCol]);
     if(!customer||amount===null){r.matchNote="بيانات العميل أو مبلغ الفاتورة ناقصة";unmatched++;return}
+    var correctionKey=referenceCorrectionKey(r,sh), savedRef=correctionKey?savedReferenceCorrections[correctionKey]:"";
+    if(savedRef){r.ref=savedRef;r.values[sh.refCol]=savedRef;r.matchedOrder=savedRef;r.matchNote="تم تطبيق التصحيح المحفوظ";matched++;return}
+    if(!salesOrderRows.length){r.matchNote="ارفع تقرير طلبات البيع لإكمال المطابقة";unmatched++;return}
     var found=salesOrderRows.filter(function(o){return o.customer===customer&&o.amount===amount});
     if(found.length===1){
       r.ref=found[0].order;r.values[sh.refCol]=found[0].order;r.matchedOrder=found[0].order;
+      saveReferenceCorrection(r,sh);
       r.matchNote="تم الربط تلقائيًا";matched++;
     }else if(found.length>1){r.matchNote="يوجد أكثر من طلب بنفس العميل والقيمة؛ أدخل المرجع يدويًا";ambiguous++}
     else{r.matchNote="لم يوجد طلب مطابق؛ أدخل المرجع يدويًا";unmatched++}
@@ -199,7 +216,7 @@ function renderMissing(){
   var card=document.getElementById("missingCard"),body=document.getElementById("missingBody");
   card.hidden=!missingRows.length;
   body.innerHTML=missingRows.map(function(r,i){return "<tr><td>"+esc(r.invoice||"غير محدد")+"</td><td>"+esc(r.order||r.matchedOrder||"—")+"</td><td>"+esc(r.sheet)+" / "+r.row+"</td><td><input class='ref-input' data-index='"+i+"' value='"+esc(r.ref)+"' placeholder='0000-00'></td><td class='row-status'></td></tr>"}).join("");
-  body.querySelectorAll(".ref-input").forEach(function(input){input.addEventListener("input",function(){var r=missingRows[Number(input.dataset.index)];r.ref=input.value.trim();r.matchNote="";r.values[invoiceSheets.find(function(s){return s.name===r.sheet}).refCol]=r.ref;var status=input.closest("tr").querySelector(".row-status");status.innerHTML=r.ref&&r.ref.indexOf("000")===0?'<span class="ok">مكتمل</span>':'<span class="error">أدخل رقمًا يبدأ بـ 000</span>';updateDownload()});});
+  body.querySelectorAll(".ref-input").forEach(function(input){input.addEventListener("input",function(){var r=missingRows[Number(input.dataset.index)];r.ref=input.value.trim();r.matchNote="";var sh=invoiceSheets.find(function(s){return s.name===r.sheet});r.values[sh.refCol]=r.ref;saveReferenceCorrection(r,sh);var status=input.closest("tr").querySelector(".row-status");status.innerHTML=r.ref&&r.ref.indexOf("000")===0?'<span class="ok">مكتمل</span>':'<span class="error">أدخل رقمًا يبدأ بـ 000</span>';updateDownload()});});
   missingRows.forEach(function(r,i){var status=body.querySelectorAll(".row-status")[i];status.innerHTML=r.ref&&r.ref.indexOf("000")===0?'<span class="ok">'+esc(r.matchNote||"تم الربط تلقائيًا")+"</span>":r.matchNote?'<span class="error">'+esc(r.matchNote)+"</span>":'<span class="error">أدخل رقمًا يبدأ بـ 000</span>'});
   updateDownload();
 }
