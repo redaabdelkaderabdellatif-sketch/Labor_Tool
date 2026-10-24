@@ -92,11 +92,11 @@ function findReferenceCol(row){var exact=["رقم المرجع","reference","ref
 function hasValue(v){return v!==null&&v!==undefined&&text(v)!==""}
 function isInvoiceRow(row,refCol,invoiceCol){if(invoiceCol>=0)return hasValue(row[invoiceCol]);return row.some(function(v,i){return i!==refCol&&hasValue(v)})}
 function normalizeCustomer(v){
-  return text(v).normalize("NFKD").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/[^\\p{L}\\p{N}]+/gu," ").trim().replace(/\\s+/g," ");
+  return text(v).normalize("NFKD").replace(/[\u064B-\u065F\u0670\u0640]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/[^\p{L}\p{N}]+/gu," ").trim().replace(/\s+/g," ");
 }
 function amountValue(v){
   if(typeof v==="number"&&isFinite(v))return v;
-  var cleaned=text(v).replace(/[٬,\\s]/g,"").replace(/[^0-9.\\-]/g,"");
+  var cleaned=text(v).replace(/[٬,\s]/g,"").replace(/[^0-9.\-]/g,"");
   if(!cleaned||cleaned==="-"||cleaned===".")return NaN;
   var n=Number(cleaned);return isFinite(n)?n:NaN;
 }
