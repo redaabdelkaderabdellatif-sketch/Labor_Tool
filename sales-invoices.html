@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>فواتير المبيعات — Gaty</title>
+<script>
+(function(){var t=localStorage.getItem("gaty_apps_gate");if(!t||(Date.now()-Number(t)>=3600000))window.location.replace("index.html");})();
+</script>
+<script src="xlsx.full.min.js"></script>
+<style>
+:root{--p:#714B67;--pd:#5B3A54;--bg:#f7f7f9;--line:#e1dfe5;--muted:#716b79;--green:#168653;--red:#c53643}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#25222a;font:15px "Segoe UI",Tahoma,sans-serif}
+header{background:var(--p);color:white;padding:16px 22px;font-size:20px;font-weight:700}
+main{max-width:1200px;margin:20px auto;padding:0 16px}
+.card{background:white;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px #25222a0c}
+h2{font-size:17px;color:var(--pd);margin:0 0 14px}
+.drop{border:2px dashed #cfc9d1;background:#faf9fb;border-radius:10px;min-height:125px;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;cursor:pointer;color:var(--muted)}
+.drop.loaded{border-color:var(--green);background:#eaf6ef}.drop strong{color:#201d22}.drop.drag{background:#f4edf3;border-color:var(--p)}
+input[type=file]{display:none}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+input[type=search],.ref-input{font:inherit;border:1px solid #cfcbd3;border-radius:8px;padding:10px 12px;background:white}
+input[type=search]{flex:1;min-width:220px}
+button{border:0;border-radius:8px;padding:10px 16px;background:var(--p);color:white;font:inherit;font-weight:700;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}.outline{background:white;color:var(--p);border:1px solid var(--p)}
+.status{color:var(--muted);font-size:13px;margin-top:10px}.error{color:var(--red)}.ok{color:var(--green)}
+.table-wrap{overflow:auto;max-height:440px;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:13px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{background:#f3f1f4;position:sticky;top:0;z-index:1}
+.ref-input{width:170px;padding:7px 9px}
+.badge{display:inline-block;border-radius:20px;padding:3px 8px;background:#f4edf3;color:var(--pd);font-size:12px}
+.details{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.detail{border:1px solid var(--line);border-radius:8px;padding:9px 11px;overflow-wrap:anywhere}
+.detail b{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+@media(max-width:600px){main{padding:0 10px}.card{padding:14px}}
+</style>
+</head>
+<body>
+<header>فواتير المبيعات</header>
+<main>
+  <section class="card">
+    <h2>تقرير الفواتير</h2>
+    <div class="drop" id="drop"><div><strong>اسحب ملف تقرير الفواتير هنا</strong><br>أو اضغط لاختيار ملف Excel</div></div>
+    <input id="file" type="file" accept=".xlsx,.xls,.xlsm">
+    <div id="fileName" class="status"></div>
+    <div id="summary" class="status"></div>
+  </section>
+  <section class="card" id="missingCard" hidden>
+    <h2>فواتير بدون رقم مرجع</h2>
+    <p class="status">اكتب رقم المرجع لكل فاتورة ناقصة. يجب أن يبدأ المرجع بـ 000 قبل تنزيل التقرير.</p>
+    <div class="table-wrap"><table><thead><tr><th>رقم الفاتورة</th><th>رقم الطلب</th><th>الشيت / الصف</th><th>رقم المرجع</th><th>الحالة</th></tr></thead><tbody id="missingBody"></tbody></table></div>
+  </section>
+  <section class="card">
+    <h2>بحث عن طلب</h2>
+    <div class="controls"><input id="search" type="search" placeholder="اكتب رقم الطلب"><button id="searchBtn">بحث</button></div>
+    <div id="searchStatus" class="status">ارفع التقرير للبحث في تفاصيله.</div>
+    <div id="searchResults" class="details"></div>
+  </section>
+  <section class="card">
+    <h2>تنزيل التقرير</h2>
+    <p class="status">يشمل الفواتير التي يبدأ رقم مرجعها بـ 000، بعد استكمال المراجع الناقصة.</p>
+    <button id="download" disabled>تنزيل تقرير الفواتير</button>
+    <div id="downloadStatus" class="status"></div>
+  </section>
+</main>
+<script>
+var invoiceSheets=[], missingRows=[], allRows=[], headersBySheet={};
+var drop=document.getElementById("drop"), fileInput=document.getElementById("file");
+drop.addEventListener("click",function(){fileInput.click()});
+drop.addEventListener("dragover",function(e){e.preventDefault();drop.classList.add("drag")});
+drop.addEventListener("dragleave",function(){drop.classList.remove("drag")});
+drop.addEventListener("drop",function(e){e.preventDefault();drop.classList.remove("drag");if(e.dataTransfer.files[0])loadInvoiceFile(e.dataTransfer.files[0])});
+fileInput.addEventListener("change",function(){if(fileInput.files[0])loadInvoiceFile(fileInput.files[0])});
+function text(v){if(v===null||v===undefined)return "";if(v instanceof Date&&!isNaN(v))return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");return String(v).trim()}
+function esc(v){return text(v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function headerNorm(v){return text(v).toLowerCase().replace(/[\s_\-\/]+/g," ").trim()}
+function findCol(row,terms){for(var i=0;i<row.length;i++){var h=headerNorm(row[i]);if(terms.some(function(t){return h===t||h.indexOf(t)>=0}))return i}return -1}
+function hasValue(v){return v!==null&&v!==undefined&&text(v)!==""}
+function isInvoiceRow(row,refCol,invoiceCol){if(invoiceCol>=0)return hasValue(row[invoiceCol]);return row.some(function(v,i){return i!==refCol&&hasValue(v)})}
+function parseWorkbook(wb){
+  invoiceSheets=[];missingRows=[];allRows=[];
+  wb.SheetNames.forEach(function(sheetName){
+    var raw=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:"",cellDates:true});
+    var headerRow=-1,refCol=-1;
+    for(var i=0;i<Math.min(30,raw.length);i++){
+      var c=findCol(raw[i],["رقم المرجع","reference number","reference no","reference"]);
+      if(c>=0){headerRow=i;refCol=c;break}
+    }
+    if(headerRow<0)return;
+    var headers=(raw[headerRow]||[]).map(function(v,i){return hasValue(v)?text(v):"عمود "+(i+1)});
+    var invoiceCol=findCol(raw[headerRow],["رقم الفاتورة","invoice number","invoice no","invoice #","invoice"]);
+    var orderCol=findCol(raw[headerRow],["رقم طلب البيع","رقم الطلب","sales order","order number","order no"]);
+    var sheet={name:sheetName,headerRow:headerRow,headers:headers,refCol:refCol,invoiceCol:invoiceCol,orderCol:orderCol,rows:[]};
+    for(var r=headerRow+1;r<raw.length;r++){
+      var values=(raw[r]||[]).slice();
+      if(!isInvoiceRow(values,refCol,invoiceCol))continue;
+      while(values.length<headers.length)values.push("");
+      var rec={sheet:sheetName,row:r+1,values:values,ref:text(values[refCol]),invoice:invoiceCol>=0?text(values[invoiceCol]):"",order:orderCol>=0?text(values[orderCol]):""};
+      sheet.rows.push(rec);allRows.push(rec);
+      if(!rec.ref)missingRows.push(rec);
+    }
+    invoiceSheets.push(sheet);
+  });
+  if(!invoiceSheets.length)throw new Error("لم أجد عمود رقم المرجع في أي شيت.");
+}
+function loadInvoiceFile(file){
+  document.getElementById("downloadStatus").textContent="";
+  var reader=new FileReader();
+  reader.onload=function(e){try{
+    var wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
+    parseWorkbook(wb);
+    document.getElementById("fileName").textContent="✓ "+file.name;
+    drop.classList.add("loaded");
+    renderMissing();renderSummary();
+    document.getElementById("searchStatus").textContent="ابحث برقم الطلب لعرض كل تفاصيله.";
+  }catch(err){document.getElementById("fileName").textContent="";document.getElementById("summary").innerHTML='<span class="error">'+esc(err.message)+'</span>'}};
+  reader.readAsArrayBuffer(file);
+}
+function renderMissing(){
+  var card=document.getElementById("missingCard"),body=document.getElementById("missingBody");
+  card.hidden=!missingRows.length;
+  body.innerHTML=missingRows.map(function(r,i){return "<tr><td>"+esc(r.invoice||"غير محدد")+"</td><td>"+esc(r.order||"—")+"</td><td>"+esc(r.sheet)+" / "+r.row+"</td><td><input class='ref-input' data-index='"+i+"' value='"+esc(r.ref)+"' placeholder='0000-00'></td><td class='row-status'></td></tr>"}).join("");
+  body.querySelectorAll(".ref-input").forEach(function(input){input.addEventListener("input",function(){var r=missingRows[Number(input.dataset.index)];r.ref=input.value.trim();r.values[invoiceSheets.find(function(s){return s.name===r.sheet}).refCol]=r.ref;var status=input.closest("tr").querySelector(".row-status");status.innerHTML=r.ref&&r.ref.indexOf("000")===0?'<span class="ok">مكتمل</span>':'<span class="error">أدخل رقمًا يبدأ بـ 000</span>';updateDownload()});});
+  missingRows.forEach(function(r,i){var status=body.querySelectorAll(".row-status")[i];status.innerHTML='<span class="error">أدخل رقمًا يبدأ بـ 000</span>'});
+  updateDownload();
+}
+function renderSummary(){
+  var count=allRows.length,withRef=allRows.filter(function(r){return r.ref.indexOf("000")===0}).length;
+  document.getElementById("summary").textContent="الفواتير: "+count+" | مراجع تبدأ بـ 000: "+withRef+" | مراجع ناقصة: "+missingRows.length;
+}
+function updateDownload(){
+  var pending=missingRows.some(function(r){return !r.ref||r.ref.indexOf("000")!==0});
+  var hasReport=allRows.some(function(r){return r.ref&&r.ref.indexOf("000")===0});
+  document.getElementById("download").disabled=pending||!hasReport;
+}
+document.getElementById("download").addEventListener("click",function(){
+  var wb=XLSX.utils.book_new(),count=0;
+  invoiceSheets.forEach(function(s){
+    var rows=s.rows.filter(function(r){return r.ref&&r.ref.indexOf("000")===0});
+    if(!rows.length)return;
+    var aoa=[["رقم المرجع","رقم الفاتورة","رقم الطلب",...s.headers]];
+    rows.forEach(function(r){aoa.push([r.ref,r.invoice,r.order,...r.values])});
+    var ws=XLSX.utils.aoa_to_sheet(aoa);ws["!cols"]=aoa[0].map(function(_,i){return {wch:i<3?20:18}});
+    XLSX.utils.book_append_sheet(wb,ws,(s.name||"فواتير").slice(0,25)+"_فواتير");
+    count+=rows.length;
+  });
+  if(!count){document.getElementById("downloadStatus").innerHTML='<span class="error">لا توجد فواتير بأرقام مرجع تبدأ بـ 000.</span>';return}
+  XLSX.writeFile(wb,"فواتير_المبيعات_"+new Date().toISOString().slice(0,10)+".xlsx");
+  document.getElementById("downloadStatus").innerHTML='<span class="ok">تم تجهيز '+count+' فاتورة.</span>';
+});
+function showSearch(){
+  var q=text(document.getElementById("search").value),out=document.getElementById("searchResults");
+  if(!q){document.getElementById("searchStatus").textContent="اكتب رقم الطلب للبحث.";out.innerHTML="";return}
+  var matches=allRows.filter(function(r){return (r.order&&r.order.indexOf(q)>=0)||r.values.some(function(v){return text(v).indexOf(q)>=0})});
+  document.getElementById("searchStatus").textContent=matches.length?"نتائج البحث: "+matches.length:"لم يتم العثور على رقم مطابق.";
+  out.innerHTML=matches.map(function(r){var s=invoiceSheets.find(function(x){return x.name===r.sheet});return "<div class='detail'><b>فاتورة "+esc(r.invoice||"غير محددة")+" — طلب "+esc(r.order||"غير محدد")+"</b>"+s.headers.map(function(h,i){return "<div style='margin-top:6px'><span style='color:#716b79'>"+esc(h)+": </span>"+esc(r.values[i])+"</div>"}).join("")+"</div>"}).join("");
+}
+document.getElementById("searchBtn").addEventListener("click",showSearch);
+document.getElementById("search").addEventListener("keydown",function(e){if(e.key==="Enter")showSearch()});
+</script>
+</body>
+</html>
