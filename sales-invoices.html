@@ -46,6 +46,13 @@ th{background:#f3f1f4;position:sticky;top:0;z-index:1}
     <div id="fileName" class="status"></div>
     <div id="summary" class="status"></div>
   </section>
+  <section class="card">
+    <h2>تقرير طلبات البيع للمطابقة</h2>
+    <div class="drop" id="orderDrop"><div><strong>اسحب تقرير طلبات البيع هنا</strong><br>أو اضغط لاختيار ملف Excel<br><small>تتم مطابقة العميل وصافي الطلب مع مبلغ الفاتورة لملء رقم المرجع تلقائيًا</small></div></div>
+    <input id="orderFile" type="file" accept=".xlsx,.xls,.xlsm">
+    <div id="orderFileName" class="status"></div>
+    <div id="orderMatchStatus" class="status">ارفع تقرير طلبات البيع لتعبئة المراجع الناقصة تلقائيًا.</div>
+  </section>
   <section class="card" id="missingCard" hidden>
     <h2>فواتير بدون رقم مرجع</h2>
     <p class="status">اكتب رقم المرجع لكل فاتورة ناقصة. يجب أن يبدأ المرجع بـ 000 قبل تنزيل التقرير.</p>
@@ -65,13 +72,18 @@ th{background:#f3f1f4;position:sticky;top:0;z-index:1}
   </section>
 </main>
 <script>
-var invoiceSheets=[], missingRows=[], allRows=[], headersBySheet={};
-var drop=document.getElementById("drop"), fileInput=document.getElementById("file");
+var invoiceSheets=[], missingRows=[], allRows=[], headersBySheet={}, salesOrderRows=[];
+var drop=document.getElementById("drop"), fileInput=document.getElementById("file"), orderDrop=document.getElementById("orderDrop"), orderFileInput=document.getElementById("orderFile");
 drop.addEventListener("click",function(){fileInput.click()});
 drop.addEventListener("dragover",function(e){e.preventDefault();drop.classList.add("drag")});
 drop.addEventListener("dragleave",function(){drop.classList.remove("drag")});
 drop.addEventListener("drop",function(e){e.preventDefault();drop.classList.remove("drag");if(e.dataTransfer.files[0])loadInvoiceFile(e.dataTransfer.files[0])});
 fileInput.addEventListener("change",function(){if(fileInput.files[0])loadInvoiceFile(fileInput.files[0])});
+orderDrop.addEventListener("click",function(){orderFileInput.click()});
+orderDrop.addEventListener("dragover",function(e){e.preventDefault();orderDrop.classList.add("drag")});
+orderDrop.addEventListener("dragleave",function(){orderDrop.classList.remove("drag")});
+orderDrop.addEventListener("drop",function(e){e.preventDefault();orderDrop.classList.remove("drag");if(e.dataTransfer.files[0])loadSalesOrderFile(e.dataTransfer.files[0])});
+orderFileInput.addEventListener("change",function(){if(orderFileInput.files[0])loadSalesOrderFile(orderFileInput.files[0])});
 function text(v){if(v===null||v===undefined)return "";if(v instanceof Date&&!isNaN(v))return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");return String(v).trim()}
 function esc(v){return text(v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function headerNorm(v){return text(v).toLowerCase().replace(/[\s_\-\/]+/g," ").trim()}
@@ -79,6 +91,67 @@ function findCol(row,terms){var normalized=terms.map(headerNorm);for(var i=0;i<r
 function findReferenceCol(row){var exact=["رقم المرجع","reference","reference number","reference no","ref no"].map(headerNorm);for(var i=0;i<row.length;i++)if(exact.indexOf(headerNorm(row[i]))>=0)return i;return findCol(row,["رقم المرجع","reference number","reference no","ref no"])}
 function hasValue(v){return v!==null&&v!==undefined&&text(v)!==""}
 function isInvoiceRow(row,refCol,invoiceCol){if(invoiceCol>=0)return hasValue(row[invoiceCol]);return row.some(function(v,i){return i!==refCol&&hasValue(v)})}
+function normalizeCustomer(v){
+  return text(v).normalize("NFKD").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/[^\\p{L}\\p{N}]+/gu," ").trim().replace(/\\s+/g," ");
+}
+function amountValue(v){
+  if(typeof v==="number"&&isFinite(v))return v;
+  var cleaned=text(v).replace(/[٬,\\s]/g,"").replace(/[^0-9.\\-]/g,"");
+  if(!cleaned||cleaned==="-"||cleaned===".")return NaN;
+  var n=Number(cleaned);return isFinite(n)?n:NaN;
+}
+function amountKey(v){var n=amountValue(v);return isFinite(n)?Math.round(n*100):null}
+function parseSalesOrderWorkbook(wb){
+  var parsed=[];
+  wb.SheetNames.forEach(function(sheetName){
+    var raw=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:"",cellDates:true});
+    for(var h=0;h<Math.min(30,raw.length);h++){
+      var headers=raw[h]||[];
+      var orderCol=findCol(headers,["رقم الأمر الطلبيه","رقم الأمر الطلبية","رقم الأمر","رقم طلب البيع","رقم الطلب","sales order","order number","order no"]);
+      var customerCol=findCol(headers,["اسم العميل","customer name","customer"]);
+      var amountCol=findCol(headers,["صافي المبلغ","net amount"]);
+      if(orderCol<0||customerCol<0||amountCol<0)continue;
+      for(var r=h+1;r<raw.length;r++){
+        var vals=raw[r]||[], order=text(vals[orderCol]), customer=normalizeCustomer(vals[customerCol]), amount=amountKey(vals[amountCol]);
+        if(order&&customer&&amount!==null)parsed.push({order:order,customer:customer,amount:amount});
+      }
+      return parsed;
+    }
+  });
+  if(!parsed.length)throw new Error("لم أجد أعمدة رقم الطلب واسم العميل وصافي المبلغ في تقرير طلبات البيع.");
+  return parsed;
+}
+function matchMissingReferences(){
+  var matched=0,ambiguous=0,unmatched=0;
+  if(!salesOrderRows.length)return {matched:0,ambiguous:0,unmatched:0};
+  missingRows.forEach(function(r){
+    if(r.ref)return;
+    var sh=invoiceSheets.find(function(x){return x.name===r.sheet});
+    if(!sh){unmatched++;return}
+    if(sh.customerCol<0||sh.amountCol<0){r.matchNote="أعمدة العميل أو مبلغ الفاتورة غير موجودة";unmatched++;return}
+    var customer=normalizeCustomer(r.values[sh.customerCol]), amount=amountKey(r.values[sh.amountCol]);
+    if(!customer||amount===null){r.matchNote="بيانات العميل أو مبلغ الفاتورة ناقصة";unmatched++;return}
+    var found=salesOrderRows.filter(function(o){return o.customer===customer&&o.amount===amount});
+    if(found.length===1){
+      r.ref=found[0].order;r.values[sh.refCol]=found[0].order;r.matchedOrder=found[0].order;
+      r.matchNote="تم الربط تلقائيًا";matched++;
+    }else if(found.length>1){r.matchNote="يوجد أكثر من طلب بنفس العميل والقيمة؛ أدخل المرجع يدويًا";ambiguous++}
+    else{r.matchNote="لم يوجد طلب مطابق؛ أدخل المرجع يدويًا";unmatched++}
+  });
+  return {matched:matched,ambiguous:ambiguous,unmatched:unmatched};
+}
+function loadSalesOrderFile(file){
+  var reader=new FileReader();
+  reader.onload=function(e){try{
+    var wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
+    salesOrderRows=parseSalesOrderWorkbook(wb);
+    document.getElementById("orderFileName").textContent="✓ "+file.name;
+    orderDrop.classList.add("loaded");
+    if(invoiceSheets.length){var result=matchMissingReferences();renderMissing();renderSummary();document.getElementById("orderMatchStatus").textContent="طلبات جاهزة للمطابقة: "+salesOrderRows.length+" | تمت المطابقة تلقائيًا: "+result.matched+" | تحتاج مراجعة: "+(result.ambiguous+result.unmatched)}
+    else document.getElementById("orderMatchStatus").textContent="تم تحميل "+salesOrderRows.length+" طلب. ارفع تقرير الفواتير لإكمال المطابقة.";
+  }catch(err){salesOrderRows=[];document.getElementById("orderFileName").textContent="";document.getElementById("orderMatchStatus").innerHTML='<span class="error">'+esc(err.message)+'</span>'}};
+  reader.readAsArrayBuffer(file);
+}
 function parseWorkbook(wb){
   invoiceSheets=[];missingRows=[];allRows=[];
   wb.SheetNames.forEach(function(sheetName){
@@ -92,7 +165,7 @@ function parseWorkbook(wb){
     var headers=(raw[headerRow]||[]).map(function(v,i){return hasValue(v)?text(v):"عمود "+(i+1)});
     var invoiceCol=findCol(raw[headerRow],["رقم الفاتورة","رقم الفاتوره","invoice number","invoice no","invoice #","invoice"]);
     var orderCol=findCol(raw[headerRow],["رقم طلب البيع","رقم الطلب","sales order","order number","order no"]);
-    var sheet={name:sheetName,headerRow:headerRow,headers:headers,refCol:refCol,invoiceCol:invoiceCol,orderCol:orderCol,rows:[]};
+    var customerCol=findCol(raw[headerRow],["اسم العميل","customer name","customer"]);\n    var amountCol=findCol(raw[headerRow],["مبلغ الفاتورة","إجمالي الفاتورة","invoice amount","invoice total"]);\n    var sheet={name:sheetName,headerRow:headerRow,headers:headers,refCol:refCol,invoiceCol:invoiceCol,orderCol:orderCol,customerCol:customerCol,amountCol:amountCol,rows:[]};
     for(var r=headerRow+1;r<raw.length;r++){
       var values=(raw[r]||[]).slice();
       if(!isInvoiceRow(values,refCol,invoiceCol))continue;
@@ -114,16 +187,16 @@ function loadInvoiceFile(file){
     document.getElementById("fileName").textContent="✓ "+file.name;
     drop.classList.add("loaded");
     renderMissing();renderSummary();
-    document.getElementById("searchStatus").textContent="ابحث برقم الطلب لعرض كل تفاصيله.";
+    document.getElementById("searchStatus").textContent="ابحث برقم الطلب لعرض كل تفاصيله.";\n    if(salesOrderRows.length)document.getElementById("orderMatchStatus").textContent="طلبات جاهزة للمطابقة: "+salesOrderRows.length+" | تمت المطابقة تلقائيًا: "+matchResult.matched+" | تحتاج مراجعة: "+(matchResult.ambiguous+matchResult.unmatched);
   }catch(err){document.getElementById("fileName").textContent="";document.getElementById("summary").innerHTML='<span class="error">'+esc(err.message)+'</span>'}};
   reader.readAsArrayBuffer(file);
 }
 function renderMissing(){
   var card=document.getElementById("missingCard"),body=document.getElementById("missingBody");
   card.hidden=!missingRows.length;
-  body.innerHTML=missingRows.map(function(r,i){return "<tr><td>"+esc(r.invoice||"غير محدد")+"</td><td>"+esc(r.order||"—")+"</td><td>"+esc(r.sheet)+" / "+r.row+"</td><td><input class='ref-input' data-index='"+i+"' value='"+esc(r.ref)+"' placeholder='0000-00'></td><td class='row-status'></td></tr>"}).join("");
-  body.querySelectorAll(".ref-input").forEach(function(input){input.addEventListener("input",function(){var r=missingRows[Number(input.dataset.index)];r.ref=input.value.trim();r.values[invoiceSheets.find(function(s){return s.name===r.sheet}).refCol]=r.ref;var status=input.closest("tr").querySelector(".row-status");status.innerHTML=r.ref&&r.ref.indexOf("000")===0?'<span class="ok">مكتمل</span>':'<span class="error">أدخل رقمًا يبدأ بـ 000</span>';updateDownload()});});
-  missingRows.forEach(function(r,i){var status=body.querySelectorAll(".row-status")[i];status.innerHTML='<span class="error">أدخل رقمًا يبدأ بـ 000</span>'});
+  body.innerHTML=missingRows.map(function(r,i){return "<tr><td>"+esc(r.invoice||"غير محدد")+"</td><td>"+esc(r.order||r.matchedOrder||"—")+"</td><td>"+esc(r.sheet)+" / "+r.row+"</td><td><input class='ref-input' data-index='"+i+"' value='"+esc(r.ref)+"' placeholder='0000-00'></td><td class='row-status'></td></tr>"}).join("");
+  body.querySelectorAll(".ref-input").forEach(function(input){input.addEventListener("input",function(){var r=missingRows[Number(input.dataset.index)];r.ref=input.value.trim();r.matchNote="";r.values[invoiceSheets.find(function(s){return s.name===r.sheet}).refCol]=r.ref;var status=input.closest("tr").querySelector(".row-status");status.innerHTML=r.ref&&r.ref.indexOf("000")===0?'<span class="ok">مكتمل</span>':'<span class="error">أدخل رقمًا يبدأ بـ 000</span>';updateDownload()});});
+  missingRows.forEach(function(r,i){var status=body.querySelectorAll(".row-status")[i];status.innerHTML=r.ref&&r.ref.indexOf("000")===0?'<span class="ok">'+esc(r.matchNote||"تم الربط تلقائيًا")+"</span>":r.matchNote?'<span class="error">'+esc(r.matchNote)+"</span>":'<span class="error">أدخل رقمًا يبدأ بـ 000</span>'});
   updateDownload();
 }
 function renderSummary(){
