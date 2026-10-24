@@ -192,7 +192,6 @@ function loadInvoiceFile(file){
     renderMissing();renderSummary();
     document.getElementById("searchStatus").textContent="ابحث برقم الطلب لعرض كل تفاصيله.";
     if(salesOrderRows.length)document.getElementById("orderMatchStatus").textContent="طلبات جاهزة للمطابقة: "+salesOrderRows.length+" | تمت المطابقة تلقائيًا: "+matchResult.matched+" | تحتاج مراجعة: "+(matchResult.ambiguous+matchResult.unmatched);
-    if(salesOrderRows.length)document.getElementById("orderMatchStatus").textContent="طلبات جاهزة للمطابقة: "+salesOrderRows.length+" | تمت المطابقة تلقائيًا: "+matchResult.matched+" | تحتاج مراجعة: "+(matchResult.ambiguous+matchResult.unmatched);
   }catch(err){document.getElementById("fileName").textContent="";document.getElementById("summary").innerHTML='<span class="error">'+esc(err.message)+'</span>'}};
   reader.readAsArrayBuffer(file);
 }
