@@ -216,7 +216,7 @@ function loadInvoiceFile(file){
 function renderMissing(){
   var card=document.getElementById("missingCard"),body=document.getElementById("missingBody");
   card.hidden=!missingRows.length;
-  body.innerHTML=missingRows.map(function(r,i){return "<tr><td>"+esc(r.invoice||"غير محدد")+"</td><td>"+esc(r.order||r.matchedOrder||"—")+"</td><td>"+esc(r.sheet)+" / "+r.row+"</td><td><input class='ref-input' data-index='"+i+"' value='"+esc(r.ref)+"' placeholder='245-0005'></td><td class='row-status'></td></tr>"}).join("");
+  body.innerHTML=missingRows.map(function(r,i){return "<tr><td>"+esc(r.invoice||"غير محدد")+"</td><td>"+esc(r.order||r.matchedOrder||"—")+"</td><td>"+esc(r.sheet)+" / "+r.row+"</td><td><input class='ref-input' data-index='"+i+"' value='"+esc(r.ref)+"' placeholder='رقم طلب البيع'></td><td class='row-status'></td></tr>"}).join("");
   body.querySelectorAll(".ref-input").forEach(function(input){input.addEventListener("input",function(){var r=missingRows[Number(input.dataset.index)];r.ref=input.value.trim();r.matchNote="";r.matchedOrder=/^\d+-\d+$/.test(r.ref)?r.ref:"";var sh=invoiceSheets.find(function(s){return s.name===r.sheet});r.values[sh.refCol]=r.ref;saveReferenceCorrection(r,sh);var status=input.closest("tr").querySelector(".row-status");status.innerHTML=isValidReference(r.ref)?'<span class="ok">مكتمل</span>':'<span class="error">أدخل رقم مرجع أو طلب صحيح</span>';updateDownload()});});
   missingRows.forEach(function(r,i){var status=body.querySelectorAll(".row-status")[i];status.innerHTML=isValidReference(r.ref)?'<span class="ok">'+esc(r.matchNote||"تم الربط تلقائيًا")+"</span>":r.matchNote?'<span class="error">'+esc(r.matchNote)+"</span>":'<span class="error">أدخل رقم مرجع أو طلب صحيح</span>'});
   updateDownload();
