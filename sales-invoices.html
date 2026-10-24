@@ -165,7 +165,9 @@ function parseWorkbook(wb){
     var headers=(raw[headerRow]||[]).map(function(v,i){return hasValue(v)?text(v):"عمود "+(i+1)});
     var invoiceCol=findCol(raw[headerRow],["رقم الفاتورة","رقم الفاتوره","invoice number","invoice no","invoice #","invoice"]);
     var orderCol=findCol(raw[headerRow],["رقم طلب البيع","رقم الطلب","sales order","order number","order no"]);
-    var customerCol=findCol(raw[headerRow],["اسم العميل","customer name","customer"]);\n    var amountCol=findCol(raw[headerRow],["مبلغ الفاتورة","إجمالي الفاتورة","invoice amount","invoice total"]);\n    var sheet={name:sheetName,headerRow:headerRow,headers:headers,refCol:refCol,invoiceCol:invoiceCol,orderCol:orderCol,customerCol:customerCol,amountCol:amountCol,rows:[]};
+    var customerCol=findCol(raw[headerRow],["اسم العميل","customer name","customer"]);
+    var amountCol=findCol(raw[headerRow],["مبلغ الفاتورة","إجمالي الفاتورة","invoice amount","invoice total"]);
+    var sheet={name:sheetName,headerRow:headerRow,headers:headers,refCol:refCol,invoiceCol:invoiceCol,orderCol:orderCol,customerCol:customerCol,amountCol:amountCol,rows:[]};
     for(var r=headerRow+1;r<raw.length;r++){
       var values=(raw[r]||[]).slice();
       if(!isInvoiceRow(values,refCol,invoiceCol))continue;
@@ -184,10 +186,13 @@ function loadInvoiceFile(file){
   reader.onload=function(e){try{
     var wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
     parseWorkbook(wb);
+    var matchResult=matchMissingReferences();
     document.getElementById("fileName").textContent="✓ "+file.name;
     drop.classList.add("loaded");
     renderMissing();renderSummary();
-    document.getElementById("searchStatus").textContent="ابحث برقم الطلب لعرض كل تفاصيله.";\n    if(salesOrderRows.length)document.getElementById("orderMatchStatus").textContent="طلبات جاهزة للمطابقة: "+salesOrderRows.length+" | تمت المطابقة تلقائيًا: "+matchResult.matched+" | تحتاج مراجعة: "+(matchResult.ambiguous+matchResult.unmatched);
+    document.getElementById("searchStatus").textContent="ابحث برقم الطلب لعرض كل تفاصيله.";
+    if(salesOrderRows.length)document.getElementById("orderMatchStatus").textContent="طلبات جاهزة للمطابقة: "+salesOrderRows.length+" | تمت المطابقة تلقائيًا: "+matchResult.matched+" | تحتاج مراجعة: "+(matchResult.ambiguous+matchResult.unmatched);
+    if(salesOrderRows.length)document.getElementById("orderMatchStatus").textContent="طلبات جاهزة للمطابقة: "+salesOrderRows.length+" | تمت المطابقة تلقائيًا: "+matchResult.matched+" | تحتاج مراجعة: "+(matchResult.ambiguous+matchResult.unmatched);
   }catch(err){document.getElementById("fileName").textContent="";document.getElementById("summary").innerHTML='<span class="error">'+esc(err.message)+'</span>'}};
   reader.readAsArrayBuffer(file);
 }
@@ -200,8 +205,8 @@ function renderMissing(){
   updateDownload();
 }
 function renderSummary(){
-  var count=allRows.length,withRef=allRows.filter(function(r){return r.ref.indexOf("000")===0}).length;
-  document.getElementById("summary").textContent="الفواتير: "+count+" | مراجع تبدأ بـ 000: "+withRef+" | مراجع ناقصة: "+missingRows.length;
+  var count=allRows.length,withRef=allRows.filter(function(r){return r.ref.indexOf("000")===0}).length,stillMissing=missingRows.filter(function(r){return !r.ref||r.ref.indexOf("000")!==0}).length;
+  document.getElementById("summary").textContent="الفواتير: "+count+" | مراجع تبدأ بـ 000: "+withRef+" | مراجع ناقصة: "+stillMissing;
 }
 function updateDownload(){
   var pending=missingRows.some(function(r){return !r.ref||r.ref.indexOf("000")!==0});
