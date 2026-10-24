@@ -55,7 +55,7 @@ th{background:#f3f1f4;position:sticky;top:0;z-index:1}
   </section>
   <section class="card" id="missingCard" hidden>
     <h2>فواتير بدون رقم مرجع</h2>
-    <p class="status">اكتب رقم المرجع لكل فاتورة ناقصة. يجب أن يبدأ المرجع بـ 000 قبل تنزيل التقرير.</p>
+    <p class="status">اكتب رقم المرجع أو رقم طلب البيع كما هو لكل فاتورة ناقصة.</p>
     <div class="table-wrap"><table><thead><tr><th>رقم الفاتورة</th><th>رقم الطلب</th><th>الشيت / الصف</th><th>رقم المرجع</th><th>الحالة</th></tr></thead><tbody id="missingBody"></tbody></table></div>
   </section>
   <section class="card">
@@ -66,7 +66,7 @@ th{background:#f3f1f4;position:sticky;top:0;z-index:1}
   </section>
   <section class="card">
     <h2>تنزيل التقرير</h2>
-    <p class="status">يشمل الفواتير التي يبدأ رقم مرجعها بـ 000، بعد استكمال المراجع الناقصة.</p>
+    <p class="status">يشمل الفواتير ذات المراجع الأصلية والمراجع التي أكملتها.</p>
     <button id="download" disabled>تنزيل تقرير الفواتير</button>
     <div id="downloadStatus" class="status"></div>
   </section>
@@ -103,6 +103,8 @@ function amountValue(v){
   var n=Number(cleaned);return isFinite(n)?n:NaN;
 }
 function amountKey(v){var n=amountValue(v);return isFinite(n)?Math.round(n*100):null}
+function isValidReference(v){v=text(v);return /^000/.test(v)||/^\d+-\d+$/.test(v)}
+function isReportReference(r){return !!(r&&r.ref&&(/^000/.test(r.ref)||(r.matchedOrder&&r.ref===r.matchedOrder&&/^\d+-\d+$/.test(r.ref))))}
 function loadReferenceCorrections(){try{return JSON.parse(localStorage.getItem("gaty_sales_invoice_reference_corrections_v1")||"{}")||{}}catch(e){return {}}}
 function referenceCorrectionKey(r,sh){
   if(!r||!sh||sh.customerCol<0||sh.amountCol<0||!r.invoice)return "";
@@ -111,7 +113,7 @@ function referenceCorrectionKey(r,sh){
 }
 function saveReferenceCorrection(r,sh){
   var key=referenceCorrectionKey(r,sh);if(!key)return;
-  if(r.ref&&r.ref.indexOf("000")===0)savedReferenceCorrections[key]=r.ref;else delete savedReferenceCorrections[key];
+  if(isValidReference(r.ref))savedReferenceCorrections[key]=r.ref;else delete savedReferenceCorrections[key];
   try{localStorage.setItem("gaty_sales_invoice_reference_corrections_v1",JSON.stringify(savedReferenceCorrections))}catch(e){}
 }
 function parseSalesOrderWorkbook(wb){
@@ -215,24 +217,24 @@ function loadInvoiceFile(file){
 function renderMissing(){
   var card=document.getElementById("missingCard"),body=document.getElementById("missingBody");
   card.hidden=!missingRows.length;
-  body.innerHTML=missingRows.map(function(r,i){return "<tr><td>"+esc(r.invoice||"غير محدد")+"</td><td>"+esc(r.order||r.matchedOrder||"—")+"</td><td>"+esc(r.sheet)+" / "+r.row+"</td><td><input class='ref-input' data-index='"+i+"' value='"+esc(r.ref)+"' placeholder='0000-00'></td><td class='row-status'></td></tr>"}).join("");
-  body.querySelectorAll(".ref-input").forEach(function(input){input.addEventListener("input",function(){var r=missingRows[Number(input.dataset.index)];r.ref=input.value.trim();r.matchNote="";var sh=invoiceSheets.find(function(s){return s.name===r.sheet});r.values[sh.refCol]=r.ref;saveReferenceCorrection(r,sh);var status=input.closest("tr").querySelector(".row-status");status.innerHTML=r.ref&&r.ref.indexOf("000")===0?'<span class="ok">مكتمل</span>':'<span class="error">أدخل رقمًا يبدأ بـ 000</span>';updateDownload()});});
-  missingRows.forEach(function(r,i){var status=body.querySelectorAll(".row-status")[i];status.innerHTML=r.ref&&r.ref.indexOf("000")===0?'<span class="ok">'+esc(r.matchNote||"تم الربط تلقائيًا")+"</span>":r.matchNote?'<span class="error">'+esc(r.matchNote)+"</span>":'<span class="error">أدخل رقمًا يبدأ بـ 000</span>'});
+  body.innerHTML=missingRows.map(function(r,i){return "<tr><td>"+esc(r.invoice||"غير محدد")+"</td><td>"+esc(r.order||r.matchedOrder||"—")+"</td><td>"+esc(r.sheet)+" / "+r.row+"</td><td><input class='ref-input' data-index='"+i+"' value='"+esc(r.ref)+"' placeholder='245-0005'></td><td class='row-status'></td></tr>"}).join("");
+  body.querySelectorAll(".ref-input").forEach(function(input){input.addEventListener("input",function(){var r=missingRows[Number(input.dataset.index)];r.ref=input.value.trim();r.matchNote="";r.matchedOrder=/^\d+-\d+$/.test(r.ref)?r.ref:"";var sh=invoiceSheets.find(function(s){return s.name===r.sheet});r.values[sh.refCol]=r.ref;saveReferenceCorrection(r,sh);var status=input.closest("tr").querySelector(".row-status");status.innerHTML=isValidReference(r.ref)?'<span class="ok">مكتمل</span>':'<span class="error">أدخل رقم مرجع أو طلب صحيح</span>';updateDownload()});});
+  missingRows.forEach(function(r,i){var status=body.querySelectorAll(".row-status")[i];status.innerHTML=isValidReference(r.ref)?'<span class="ok">'+esc(r.matchNote||"تم الربط تلقائيًا")+"</span>":r.matchNote?'<span class="error">'+esc(r.matchNote)+"</span>":'<span class="error">أدخل رقم مرجع أو طلب صحيح</span>'});
   updateDownload();
 }
 function renderSummary(){
-  var count=allRows.length,withRef=allRows.filter(function(r){return r.ref.indexOf("000")===0}).length,stillMissing=missingRows.filter(function(r){return !r.ref||r.ref.indexOf("000")!==0}).length;
+  var count=allRows.length,withRef=allRows.filter(isReportReference).length,stillMissing=missingRows.filter(function(r){return !isValidReference(r.ref)}).length;
   document.getElementById("summary").textContent="الفواتير: "+count+" | مراجع تبدأ بـ 000: "+withRef+" | مراجع ناقصة: "+stillMissing;
 }
 function updateDownload(){
-  var pending=missingRows.some(function(r){return !r.ref||r.ref.indexOf("000")!==0});
-  var hasReport=allRows.some(function(r){return r.ref&&r.ref.indexOf("000")===0});
+  var pending=missingRows.some(function(r){return !isValidReference(r.ref)});
+  var hasReport=allRows.some(isReportReference);
   document.getElementById("download").disabled=pending||!hasReport;
 }
 document.getElementById("download").addEventListener("click",function(){
   var wb=XLSX.utils.book_new(),count=0;
   invoiceSheets.forEach(function(s){
-    var rows=s.rows.filter(function(r){return r.ref&&r.ref.indexOf("000")===0});
+    var rows=s.rows.filter(isReportReference);
     if(!rows.length)return;
     rows.sort(function(a,b){return a.ref.localeCompare(b.ref,undefined,{numeric:true})});
     var columns=[s.refCol];
