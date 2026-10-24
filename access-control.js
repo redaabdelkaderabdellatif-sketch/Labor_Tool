@@ -8,7 +8,8 @@
     ["suppliers", "Suppliers", "الموردون"],
     ["stock", "Inventory", "المخزون"],
     ["accounting", "Accounting", "المحاسبة"],
-    ["invaccounting", "Purchasing & Warehouses", "المشتريات والمخازن"]
+    ["invaccounting", "Purchasing & Warehouses", "المشتريات والمخازن"],
+    ["sales-invoices", "Sales Invoices", "فواتير المبيعات"]
   ];
   const moduleNames = Object.fromEntries(MODULES.map(([id, en, ar]) => [id, STATE.lang === "en" ? en : ar]));
   const allowed = () => STATE.role === "admin" ? MODULES.map(x => x[0]) : (STATE.allowedModules || []);
@@ -246,7 +247,8 @@
       ["uncosted", STATE.lang === "en" ? "Uncosted" : "لم يتم التكلفة"],
       ["cost", t("appTransferCost")], ["movement", STATE.lang === "en" ? "Item Movement" : "حركة الأصناف"],
       ["suppliers", STATE.lang === "en" ? "Suppliers" : "الموردون"], ["stock", STATE.lang === "en" ? "Inventory" : "المخزون"],
-      ["accounting", STATE.lang === "en" ? "Accounting" : "المحاسبة"], ["invaccounting", STATE.lang === "en" ? "Purchasing & Warehouses" : "المشتريات والمخازن"]
+      ["accounting", STATE.lang === "en" ? "Accounting" : "المحاسبة"], ["invaccounting", STATE.lang === "en" ? "Purchasing & Warehouses" : "المشتريات والمخازن"],
+      ["sales-invoices", STATE.lang === "en" ? "Sales Invoices" : "فواتير المبيعات"]
     ].filter(([id]) => STATE.role === "admin" || canOpen(id));
     return `<nav class="gaty-module-tabs" aria-label="Gaty Cost modules">${items.map(([id, label]) => `<button type="button" class="${active === id ? "active" : ""}" ${active === id ? 'aria-current="page"' : ""} onclick="selectModuleTab('${id}')">${label}</button>`).join("")}</nav>`;
   };
@@ -400,7 +402,7 @@
     }
     const key = String(STATE.section || "").slice(7);
     if (!canOpen(key) || !MODULES.some(x => x[0] === key)) { STATE.section = null; return renderDashboardScreen(); }
-    const titles = { raw: "Raw Materials", uncosted: "Uncosted", cost: t("appTransferCost"), movement: "Item Movement", suppliers: "Suppliers", stock: "Inventory", accounting: "Accounting System", invaccounting: "Purchasing & Warehouses" };
+    const titles = { raw: "Raw Materials", uncosted: "Uncosted", cost: t("appTransferCost"), movement: "Item Movement", suppliers: "Suppliers", stock: "Inventory", accounting: "Accounting System", invaccounting: "Purchasing & Warehouses", "sales-invoices": STATE.lang === "en" ? "Sales Invoices" : "فواتير المبيعات" };
     return `<div class="header"><div class="header-inner"><div class="header-left"><h1 class="title">${esc(appName())}</h1><span>${esc(STATE.name)}</span></div><div style="display:flex;align-items:center;gap:10px;">${langSwitcherHtml()}<button class="logout-btn" onclick="backToDashboard()">${t("backToDashboard")}</button><button class="logout-btn" onclick="logout()">${t("logoutBtn")}</button></div></div></div>${moduleTabsHtml(key)}<main style="padding:0 12px 18px;"><iframe id="gaty-module-frame" class="gaty-module-frame" title="${titles[key] || key}" loading="eager"></iframe></main>`;
   };
   const oldRenderRawMaterialsScreen = renderRawMaterialsScreen;
