@@ -107,9 +107,8 @@ function isValidReference(v){v=text(v);return /^000/.test(v)||/^\d+-\d+$/.test(v
 function isReportReference(r){return !!(r&&r.ref&&(/^000/.test(r.ref)||(r.matchedOrder&&r.ref===r.matchedOrder&&/^\d+-\d+$/.test(r.ref))))}
 function loadReferenceCorrections(){try{return JSON.parse(localStorage.getItem("gaty_sales_invoice_reference_corrections_v1")||"{}")||{}}catch(e){return {}}}
 function referenceCorrectionKey(r,sh){
-  if(!r||!sh||sh.customerCol<0||sh.amountCol<0||!r.invoice)return "";
-  var customer=normalizeCustomer(r.values[sh.customerCol]), amount=amountKey(r.values[sh.amountCol]);
-  return customer&&amount!==null?JSON.stringify([r.invoice,customer,amount]):"";
+  if(!r||!r.invoice)return "";
+  return JSON.stringify([r.invoice]);
 }
 function saveReferenceCorrection(r,sh){
   var key=referenceCorrectionKey(r,sh);if(!key)return;
