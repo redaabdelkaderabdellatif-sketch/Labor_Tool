@@ -53,6 +53,20 @@ th{background:#f3f1f4;position:sticky;top:0;z-index:1}
     <div id="orderFileName" class="status"></div>
     <div id="orderMatchStatus" class="status">ارفع تقرير طلبات البيع لتعبئة المراجع الناقصة تلقائيًا.</div>
   </section>
+  <section class="card">
+    <h2>سندات القبض (اختياري)</h2>
+    <div class="drop" id="receiptDrop"><div><strong>اسحب شيت سندات القبض هنا</strong><br>أو اضغط لاختيار ملف Excel<br><small>مطابقة اسم العميل مع تقرير طلبات البيع</small></div></div>
+    <input id="receiptFile" type="file" accept=".xlsx,.xls,.xlsm">
+    <div id="receiptFileName" class="status"></div>
+    <div id="receiptStatus" class="status">هذا الشيت اختياري. ارفع تقرير طلبات البيع وسندات القبض لعرض المطابقة.</div>
+  </section>
+  <section class="card" id="receiptReportCard" hidden>
+    <h2>تقرير طلبات البيع وسندات القبض</h2>
+    <p class="status">المقبوض معروض على مستوى العميل؛ لا يتم توزيعه على طلب بعينه إلا إذا كان السند مرتبطًا به مباشرة.</p>
+    <div class="controls"><input id="receiptSearch" type="search" placeholder="ابحث باسم العميل أو رقم الحساب أو الطلب"><button id="receiptReportDownload">تنزيل التقرير</button></div>
+    <div id="receiptReportStatus" class="status"></div>
+    <div class="table-wrap"><table><thead><tr><th>العميل</th><th>رقم الحساب</th><th>طلبات البيع</th><th>إجمالي صافي الطلبات</th><th>إجمالي المقبوض</th><th>عدد سندات القبض</th><th>تواريخ القبض</th><th>أرقام السندات</th></tr></thead><tbody id="receiptReportBody"></tbody></table></div>
+  </section>
   <section class="card" id="missingCard" hidden>
     <h2>فواتير بدون رقم مرجع</h2>
     <p class="status">اكتب رقم المرجع أو رقم طلب البيع كما هو لكل فاتورة ناقصة.</p>
@@ -72,10 +86,10 @@ th{background:#f3f1f4;position:sticky;top:0;z-index:1}
   </section>
 </main>
 <script>
-var invoiceSheets=[], missingRows=[], allRows=[], headersBySheet={}, salesOrderRows=[];
+var invoiceSheets=[], missingRows=[], allRows=[], headersBySheet={}, salesOrderRows=[], receiptRows=[], receiptReportRows=[];
 var savedReferenceCorrections=loadReferenceCorrections();
 var REFERENCE_CORRECTIONS_KEY="gaty_sales_invoice_reference_corrections_v1";
-var drop=document.getElementById("drop"), fileInput=document.getElementById("file"), orderDrop=document.getElementById("orderDrop"), orderFileInput=document.getElementById("orderFile");
+var drop=document.getElementById("drop"), fileInput=document.getElementById("file"), orderDrop=document.getElementById("orderDrop"), orderFileInput=document.getElementById("orderFile"), receiptDrop=document.getElementById("receiptDrop"), receiptFileInput=document.getElementById("receiptFile");
 drop.addEventListener("click",function(){fileInput.click()});
 drop.addEventListener("dragover",function(e){e.preventDefault();drop.classList.add("drag")});
 drop.addEventListener("dragleave",function(){drop.classList.remove("drag")});
@@ -86,6 +100,13 @@ orderDrop.addEventListener("dragover",function(e){e.preventDefault();orderDrop.c
 orderDrop.addEventListener("dragleave",function(){orderDrop.classList.remove("drag")});
 orderDrop.addEventListener("drop",function(e){e.preventDefault();orderDrop.classList.remove("drag");if(e.dataTransfer.files[0])loadSalesOrderFile(e.dataTransfer.files[0])});
 orderFileInput.addEventListener("change",function(){if(orderFileInput.files[0])loadSalesOrderFile(orderFileInput.files[0])});
+receiptDrop.addEventListener("click",function(){receiptFileInput.click()});
+receiptDrop.addEventListener("dragover",function(e){e.preventDefault();receiptDrop.classList.add("drag")});
+receiptDrop.addEventListener("dragleave",function(){receiptDrop.classList.remove("drag")});
+receiptDrop.addEventListener("drop",function(e){e.preventDefault();receiptDrop.classList.remove("drag");if(e.dataTransfer.files[0])loadReceiptFile(e.dataTransfer.files[0])});
+receiptFileInput.addEventListener("change",function(){if(receiptFileInput.files[0])loadReceiptFile(receiptFileInput.files[0])});
+document.getElementById("receiptSearch").addEventListener("input",renderReceiptReport);
+document.getElementById("receiptReportDownload").addEventListener("click",downloadReceiptReport);
 function text(v){if(v===null||v===undefined)return "";if(v instanceof Date&&!isNaN(v))return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");return String(v).trim()}
 function esc(v){return text(v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function headerNorm(v){return text(v).toLowerCase().replace(/[\s_\-\/]+/g," ").trim()}
@@ -127,13 +148,95 @@ function parseSalesOrderWorkbook(wb){
       if(orderCol<0||customerCol<0||amountCol<0)continue;
       for(var r=h+1;r<raw.length;r++){
         var vals=raw[r]||[], order=text(vals[orderCol]), customer=normalizeCustomer(vals[customerCol]), amount=amountKey(vals[amountCol]);
-        if(order&&customer&&amount!==null)parsed.push({order:order,customer:customer,amount:amount});
+        if(order&&customer&&amount!==null)parsed.push({order:order,customer:customer,customerName:text(vals[customerCol]),amount:amount});
       }
       return parsed;
     }
   });
   if(!parsed.length)throw new Error("لم أجد أعمدة رقم الطلب واسم العميل وصافي المبلغ في تقرير طلبات البيع.");
   return parsed;
+}
+function splitAccountCustomer(value){
+  var raw=text(value),m=raw.match(/^\s*([0-9][0-9\/-]*)\s*[-–—:]\s*(.+?)\s*$/);
+  return m?{account:m[1].trim(),customer:m[2].trim()}:{account:"",customer:raw};
+}
+function parseReceiptWorkbook(wb){
+  var parsed=[];
+  wb.SheetNames.forEach(function(sheetName){
+    var raw=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:"",cellDates:true});
+    for(var h=0;h<Math.min(40,raw.length);h++){
+      var headers=raw[h]||[];
+      var customerCol=findCol(headers,["اسم العميل","اسم الحساب","اسم الطرف","العميل","customer name","customer","account name","اسم الزبون"]);
+      var accountCol=findCol(headers,["رقم الحساب","كود الحساب","account code","account number","account no","رقم العميل"]);
+      var amountCol=findCol(headers,["مبلغ القبض","المبلغ المقبوض","قيمة القبض","مبلغ السند","المبلغ","amount received","receipt amount","paid amount","amount","دائن","مدين"]);
+      var dateCol=findCol(headers,["تاريخ القبض","تاريخ السند","التاريخ","receipt date","voucher date","date"]);
+      var voucherCol=findCol(headers,["رقم سند القبض","رقم السند","رقم القبض","receipt voucher","receipt no","voucher no","document number","رقم المستند"]);
+      if(customerCol<0&&accountCol<0)continue;
+      if(amountCol<0)continue;
+      for(var r=h+1;r<raw.length;r++){
+        var vals=raw[r]||[], rawName=text(vals[customerCol>=0?customerCol:accountCol]);
+        if(!rawName)continue;
+        var nameParts=splitAccountCustomer(rawName), customer=nameParts.customer, account=nameParts.account;
+        if(accountCol>=0){
+          var accountRaw=text(vals[accountCol]), accountParts=splitAccountCustomer(accountRaw);
+          if(/^\d[\d\/-]*$/.test(accountRaw))account=accountRaw;
+          else if(accountParts.account)account=accountParts.account;
+          if(customerCol<0&&accountParts.customer)customer=accountParts.customer;
+        }
+        var amount=amountValue(vals[amountCol]);
+        if(!customer||!isFinite(amount))continue;
+        parsed.push({sheet:sheetName,row:r+1,customer:customer,customerKey:normalizeCustomer(customer),account:account,amount:amount,date:dateCol>=0?text(vals[dateCol]):"",voucher:voucherCol>=0?text(vals[voucherCol]):""});
+      }
+      return parsed;
+    }
+  });
+  if(!parsed.length)throw new Error("لم أجد أعمدة اسم الحساب / العميل والمبلغ في شيت سندات القبض.");
+  return parsed;
+}
+function buildReceiptReport(){
+  var ordersByCustomer={},receiptsByCustomer={};
+  salesOrderRows.forEach(function(o){
+    if(!o.customer)return;
+    var g=ordersByCustomer[o.customer]||(ordersByCustomer[o.customer]={customer:o.customerName||o.customer,orders:{},orderTotal:0});
+    if(o.order&&!g.orders[o.order]){g.orders[o.order]=o.amount/100;g.orderTotal+=o.amount/100}
+  });
+  receiptRows.forEach(function(r){
+    if(!r.customerKey)return;
+    var g=receiptsByCustomer[r.customerKey]||(receiptsByCustomer[r.customerKey]={customer:r.customer,accounts:{},amount:0,dates:{},vouchers:{},count:0});
+    if(r.account)g.accounts[r.account]=true;
+    g.amount+=r.amount;g.count++;
+    if(r.date)g.dates[r.date]=true;
+    if(r.voucher)g.vouchers[r.voucher]=true;
+  });
+  var rows=[];
+  Object.keys(ordersByCustomer).forEach(function(key){
+    var g=ordersByCustomer[key],receipt=receiptsByCustomer[key];
+    if(!receipt)return;
+    rows.push({customer:g.customer,customerKey:key,accounts:Object.keys(receipt.accounts),orders:Object.keys(g.orders).map(function(order){return {order:order,amount:g.orders[order]}}),orderTotal:g.orderTotal,received:receipt.amount,receiptCount:receipt.count,dates:Object.keys(receipt.dates).sort(),vouchers:Object.keys(receipt.vouchers).sort()});
+  });
+  return rows.sort(function(a,b){return a.customer.localeCompare(b.customer,"ar")});
+}
+function renderReceiptReport(){
+  var card=document.getElementById("receiptReportCard"),body=document.getElementById("receiptReportBody"),status=document.getElementById("receiptReportStatus");
+  if(!receiptRows.length||!salesOrderRows.length){card.hidden=true;status.textContent=receiptRows.length?"ارفع تقرير طلبات البيع لعرض المطابقة.":"ارفع شيت سندات القبض وتقرير طلبات البيع لعرض التقرير.";return}
+  card.hidden=false;receiptReportRows=buildReceiptReport();
+  var q=normalizeCustomer(document.getElementById("receiptSearch").value),visible=receiptReportRows.filter(function(r){
+    return !q||normalizeCustomer(r.customer+" "+r.accounts.join(" ")+" "+r.orders.map(function(o){return o.order}).join(" ")).indexOf(q)>=0;
+  });
+  body.innerHTML=visible.map(function(r){
+    return "<tr><td>"+esc(r.customer)+"</td><td>"+esc(r.accounts.join("، ")||"—")+"</td><td>"+r.orders.map(function(o){return esc(o.order)+" ("+esc(o.amount.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}))+")"}).join("<br>")+"</td><td>"+esc(r.orderTotal.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}))+"</td><td>"+esc(r.received.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}))+"</td><td>"+r.receiptCount+"</td><td>"+esc(r.dates.join("، ")||"—")+"</td><td>"+esc(r.vouchers.join("، ")||"—")+"</td></tr>";
+  }).join("");
+  var matchedReceiptRows=receiptRows.filter(function(r){return ordersByCustomerHasName(r.customerKey)}).length;
+  status.textContent=receiptReportRows.length?"عملاء مطابقون: "+receiptReportRows.length+" | سندات قبض مرتبطة: "+matchedReceiptRows+" | طلبات بيع: "+receiptReportRows.reduce(function(n,r){return n+r.orders.length},0)+(visible.length!==receiptReportRows.length?" | نتائج البحث: "+visible.length:""):"لا توجد أسماء عملاء متطابقة بين الشيتين.";
+}
+function ordersByCustomerHasName(key){return salesOrderRows.some(function(o){return o.customer===key})}
+function downloadReceiptReport(){
+  if(!receiptReportRows.length)return;
+  var aoa=[["العميل","رقم الحساب","طلبات البيع","إجمالي صافي الطلبات","إجمالي المقبوض من العميل","عدد سندات القبض","تواريخ القبض","أرقام السندات"]];
+  receiptReportRows.forEach(function(r){aoa.push([r.customer,r.accounts.join("، "),r.orders.map(function(o){return o.order+" ("+o.amount.toFixed(2)+")"}).join(" | "),r.orderTotal,r.received,r.receiptCount,r.dates.join("، "),r.vouchers.join("، ")])});
+  var wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(aoa);ws["!cols"]=[{wch:35},{wch:20},{wch:40},{wch:22},{wch:24},{wch:18},{wch:35},{wch:35}];
+  XLSX.utils.book_append_sheet(wb,ws,"سندات القبض والمبيعات");
+  XLSX.writeFile(wb,"مطابقة_طلبات_البيع_وسندات_القبض_"+new Date().toISOString().slice(0,10)+".xlsx");
 }
 function matchMissingReferences(){
   var matched=0,ambiguous=0,unmatched=0;
@@ -167,7 +270,20 @@ function loadSalesOrderFile(file){
     orderDrop.classList.add("loaded");
     if(invoiceSheets.length){var result=matchMissingReferences();renderMissing();renderSummary();document.getElementById("orderMatchStatus").textContent="طلبات جاهزة للمطابقة: "+salesOrderRows.length+" | تمت المطابقة تلقائيًا: "+result.matched+" | تحتاج مراجعة: "+(result.ambiguous+result.unmatched)}
     else document.getElementById("orderMatchStatus").textContent="تم تحميل "+salesOrderRows.length+" طلب. ارفع تقرير الفواتير لإكمال المطابقة.";
+    renderReceiptReport();
   }catch(err){salesOrderRows=[];document.getElementById("orderFileName").textContent="";document.getElementById("orderMatchStatus").innerHTML='<span class="error">'+esc(err.message)+'</span>'}};
+  reader.readAsArrayBuffer(file);
+}
+function loadReceiptFile(file){
+  var reader=new FileReader();
+  reader.onload=function(e){try{
+    var wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
+    receiptRows=parseReceiptWorkbook(wb);
+    document.getElementById("receiptFileName").textContent="✓ "+file.name;
+    receiptDrop.classList.add("loaded");
+    document.getElementById("receiptStatus").textContent="سندات القبض: "+receiptRows.length+" | ارفع تقرير طلبات البيع لعرض العملاء المطابقين.";
+    renderReceiptReport();
+  }catch(err){receiptRows=[];document.getElementById("receiptFileName").textContent="";receiptDrop.classList.remove("loaded");document.getElementById("receiptStatus").innerHTML='<span class="error">'+esc(err.message)+'</span>';renderReceiptReport()}};
   reader.readAsArrayBuffer(file);
 }
 function parseWorkbook(wb){
