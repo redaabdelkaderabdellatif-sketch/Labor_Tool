@@ -124,6 +124,15 @@ function amountValue(v){
   var n=Number(cleaned);return isFinite(n)?n:NaN;
 }
 function amountKey(v){var n=amountValue(v);return isFinite(n)?Math.round(n*100):null}
+function normalizeInvoiceReference(value){
+  var raw=text(value).replace(/\u00a0/g," ").trim();
+  if(!raw)return "";
+  var m=raw.match(/(\d+)\s*-\s*(\d+)\s*$/);
+  if(!m)return "";
+  var first=m[1],second=m[2];
+  if(!/^0{3,}\d*$/.test(first)&&/^0{3,}\d+$/.test(second))return second+"-"+first;
+  return first+"-"+second;
+}
 function isValidReference(v){v=text(v);return /^000/.test(v)||/^\d+-\d+$/.test(v)}
 function isReportReference(r){return !!(r&&r.ref&&(/^000/.test(r.ref)||(r.matchedOrder&&r.ref===r.matchedOrder&&/^\d+-\d+$/.test(r.ref))))}
 function loadReferenceCorrections(){try{return JSON.parse(localStorage.getItem("gaty_sales_invoice_reference_corrections_v1")||"{}")||{}}catch(e){return {}}}
@@ -304,9 +313,11 @@ function parseWorkbook(wb){
       var values=(raw[r]||[]).slice();
       if(!isInvoiceRow(values,refCol,invoiceCol))continue;
       while(values.length<headers.length)values.push("");
-      var rec={sheet:sheetName,row:r+1,values:values,ref:text(values[refCol]),invoice:invoiceCol>=0?text(values[invoiceCol]):"",order:orderCol>=0?text(values[orderCol]):""};
+      var rawRef=text(values[refCol]),normalizedRef=normalizeInvoiceReference(rawRef);
+      var rec={sheet:sheetName,row:r+1,values:values,ref:normalizedRef||rawRef,rawRef:rawRef,invoice:invoiceCol>=0?text(values[invoiceCol]):"",order:orderCol>=0?text(values[orderCol]):""};
+      if(normalizedRef)values[refCol]=normalizedRef;
       sheet.rows.push(rec);allRows.push(rec);
-      if(!rec.ref)missingRows.push(rec);
+      if(!isValidReference(rec.ref))missingRows.push(rec);
     }
     invoiceSheets.push(sheet);
   });
