@@ -65,7 +65,7 @@ th{background:#f3f1f4;position:sticky;top:0;z-index:1}
     <p class="status">المقبوض معروض على مستوى العميل؛ لا يتم توزيعه على طلب بعينه إلا إذا كان السند مرتبطًا به مباشرة.</p>
     <div class="controls"><input id="receiptSearch" type="search" placeholder="ابحث باسم العميل أو رقم الحساب أو الطلب"><button id="receiptReportDownload">تنزيل التقرير</button></div>
     <div id="receiptReportStatus" class="status"></div>
-    <div class="table-wrap"><table><thead><tr><th>العميل</th><th>رقم الحساب</th><th>طلبات البيع</th><th>صافي المبيعات</th><th>المسدد</th><th>المتبقي</th><th>حالة السداد</th><th>عدد سندات القبض</th><th>تفاصيل سندات القبض (رقم / تاريخ / مبلغ / تعريف)</th></tr></thead><tbody id="receiptReportBody"></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>العميل</th><th>رقم الحساب</th><th>طلبات البيع</th><th>صافي المبيعات</th><th>المسدد</th><th>المتبقي</th><th>حالة الربط والسداد</th><th>عدد سندات القبض</th><th>تفاصيل سندات القبض (رقم / تاريخ / مبلغ / تعريف)</th></tr></thead><tbody id="receiptReportBody"></tbody></table></div>
   </section>
   <section class="card" id="missingCard" hidden>
     <h2>فواتير بدون رقم مرجع</h2>
@@ -216,12 +216,15 @@ function buildReceiptReport(){
     g.amount+=r.amount;g.count++;
     g.details.push({voucher:r.voucher,date:r.date,amount:r.amount,description:r.description});
   });
-  var rows=[];
-  Object.keys(ordersByCustomer).forEach(function(key){
-    var g=ordersByCustomer[key],receipt=receiptsByCustomer[key];
-    if(!receipt)return;
-    var outstanding=Math.max(0,g.orderTotal-receipt.amount),paymentStatus=receipt.amount<=0?"لم يسدد":outstanding<=0?"مسدد بالكامل":"مسدد جزئيًا";
-    rows.push({customer:g.customer,customerKey:key,accounts:Object.keys(receipt.accounts),orders:Object.keys(g.orders).map(function(order){return {order:order,amount:g.orders[order].amount,date:g.orders[order].date}}),orderTotal:g.orderTotal,received:receipt.amount,outstanding:outstanding,paymentStatus:paymentStatus,receiptCount:receipt.count,receipts:receipt.details});
+  var rows=[],keys={};
+  Object.keys(ordersByCustomer).forEach(function(key){keys[key]=true});
+  Object.keys(receiptsByCustomer).forEach(function(key){keys[key]=true});
+  Object.keys(keys).forEach(function(key){
+    var g=ordersByCustomer[key],receipt=receiptsByCustomer[key],hasOrders=!!g,hasReceipts=!!receipt;
+    var orderTotal=hasOrders?g.orderTotal:null,received=hasReceipts?receipt.amount:0;
+    var outstanding=hasOrders?Math.max(0,orderTotal-received):null;
+    var paymentStatus=!hasOrders?"سند قبض بلا طلب بيع مطابق":!hasReceipts?"طلب بيع بلا سند قبض":received<=0?"سند قبض بدون مبلغ":outstanding<=0?"مسدد بالكامل":"مسدد جزئيًا";
+    rows.push({customer:(g&&g.customer)||(receipt&&receipt.customer)||key,customerKey:key,accounts:receipt?Object.keys(receipt.accounts):[],orders:hasOrders?Object.keys(g.orders).map(function(order){return {order:order,amount:g.orders[order].amount,date:g.orders[order].date}}):[],orderTotal:orderTotal,received:received,outstanding:outstanding,paymentStatus:paymentStatus,hasOrders:hasOrders,hasReceipts:hasReceipts,receiptCount:receipt?receipt.count:0,receipts:receipt?receipt.details:[]});
   });
   return rows.sort(function(a,b){return a.customer.localeCompare(b.customer,"ar")});
 }
@@ -233,15 +236,15 @@ function renderReceiptReport(){
     return !q||normalizeCustomer(r.customer+" "+r.accounts.join(" ")+" "+r.orders.map(function(o){return o.order}).join(" ")).indexOf(q)>=0;
   });
   body.innerHTML=visible.map(function(r){
-    var money=function(v){return esc(v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}))},statusClass=r.paymentStatus==="مسدد بالكامل"?"ok":r.paymentStatus==="مسدد جزئيًا"?"badge":"error";
+    var money=function(v){return v===null||v===undefined?"—":esc(v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}))},statusClass=r.paymentStatus==="مسدد بالكامل"?"ok":r.paymentStatus==="مسدد جزئيًا"?"badge":"error";
     return "<tr><td>"+esc(r.customer)+"</td><td>"+esc(r.accounts.join("، ")||"—")+"</td><td>"+r.orders.map(function(o){return esc(o.order)+" / "+esc(o.date||"—")+" / "+money(o.amount)}).join("<br>")+"</td><td>"+money(r.orderTotal)+"</td><td>"+money(r.received)+"</td><td>"+money(r.outstanding)+"</td><td><span class=\"badge "+statusClass+"\">"+esc(r.paymentStatus)+"</span></td><td>"+r.receiptCount+"</td><td>"+r.receipts.map(function(x){return esc(x.voucher||"—")+" / "+esc(x.date||"—")+" / "+money(x.amount)+" / "+esc(x.description||"—")}).join("<br>")+"</td></tr>";
   }).join("");
-  var matchedReceiptRows=receiptReportRows.reduce(function(n,r){return n+r.receiptCount},0);
-  status.textContent=receiptReportRows.length?"عملاء مطابقون: "+receiptReportRows.length+" | سندات قبض مرتبطة: "+matchedReceiptRows+" | طلبات بيع: "+receiptReportRows.reduce(function(n,r){return n+r.orders.length},0)+(visible.length!==receiptReportRows.length?" | نتائج البحث: "+visible.length:""):"لا توجد أسماء عملاء متطابقة بين الشيتين.";
+  var matchedReceiptRows=receiptReportRows.reduce(function(n,r){return n+r.receiptCount},0),matchedCustomers=receiptReportRows.filter(function(r){return r.hasOrders&&r.hasReceipts}).length,ordersWithoutReceipts=receiptReportRows.filter(function(r){return r.hasOrders&&!r.hasReceipts}).length,receiptsWithoutOrders=receiptReportRows.filter(function(r){return !r.hasOrders&&r.hasReceipts}).length;
+  status.textContent="عملاء: "+receiptReportRows.length+" | مطابقون: "+matchedCustomers+" | طلبات بلا سند قبض: "+ordersWithoutReceipts+" | سندات بلا طلب بيع مطابق: "+receiptsWithoutOrders+" | عدد السندات: "+matchedReceiptRows+(visible.length!==receiptReportRows.length?" | نتائج البحث: "+visible.length:"");
 }
 function downloadReceiptReport(){
   if(!receiptReportRows.length)return;
-  var aoa=[["العميل","رقم الحساب","طلبات البيع (رقم / تاريخ / صافي)","صافي المبيعات","المسدد حسب سندات القبض","المتبقي","حالة السداد","عدد سندات القبض","تفاصيل سندات القبض (رقم / تاريخ / مبلغ / تعريف)"]];
+  var aoa=[["العميل","رقم الحساب","طلبات البيع (رقم / تاريخ / صافي)","صافي المبيعات","المسدد حسب سندات القبض","المتبقي","حالة الربط والسداد","عدد سندات القبض","تفاصيل سندات القبض (رقم / تاريخ / مبلغ / تعريف)"]];
   receiptReportRows.forEach(function(r){aoa.push([r.customer,r.accounts.join("، "),r.orders.map(function(o){return o.order+" / "+o.date+" / "+o.amount.toFixed(2)}).join(" | "),r.orderTotal,r.received,r.outstanding,r.paymentStatus,r.receiptCount,r.receipts.map(function(x){return x.voucher+" / "+x.date+" / "+x.amount.toFixed(2)+" / "+x.description}).join(" | ")])});
   var wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(aoa);ws["!cols"]=[{wch:35},{wch:20},{wch:48},{wch:22},{wch:22},{wch:18},{wch:18},{wch:18},{wch:80}];
   XLSX.utils.book_append_sheet(wb,ws,"سندات القبض والمبيعات");
