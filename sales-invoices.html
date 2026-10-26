@@ -302,17 +302,23 @@ function parseWorkbook(wb){
   invoiceSheets=[];missingRows=[];allRows=[];
   wb.SheetNames.forEach(function(sheetName){
     var raw=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:"",cellDates:true});
-    var headerRow=-1,refCol=-1;
+    var headerRow=-1,refCol=-1,invoiceTerms=["رقم الفاتورة","رقم الفاتوره","invoice number","invoice no","invoice #"];
     for(var i=0;i<Math.min(30,raw.length);i++){
       var c=findReferenceCol(raw[i]);
       if(c>=0){headerRow=i;refCol=c;break}
     }
+    if(headerRow<0){
+      for(var j=0;j<Math.min(30,raw.length);j++){
+        if(findCol(raw[j],invoiceTerms)>=0){headerRow=j;break}
+      }
+    }
     if(headerRow<0)return;
     var headers=(raw[headerRow]||[]).map(function(v,i){return hasValue(v)?text(v):"عمود "+(i+1)});
-    var invoiceCol=findCol(raw[headerRow],["رقم الفاتورة","رقم الفاتوره","invoice number","invoice no","invoice #","invoice"]);
+    var invoiceCol=findCol(raw[headerRow],invoiceTerms);
+    if(refCol<0){refCol=headers.length;headers.push("رقم المرجع")}
     var orderCol=findCol(raw[headerRow],["رقم طلب البيع","رقم الطلب","sales order","order number","order no"]);
     var customerCol=findCol(raw[headerRow],["اسم العميل","customer name","customer"]);
-    var amountCol=findCol(raw[headerRow],["مبلغ الفاتورة","إجمالي الفاتورة","invoice amount","invoice total"]);
+    var amountCol=findCol(raw[headerRow],["مبلغ الفاتورة","إجمالي الفاتورة","صافي المبلغ","المبلغ الصافي","invoice amount","invoice total","net amount"]);
     var sheet={name:sheetName,headerRow:headerRow,headers:headers,refCol:refCol,invoiceCol:invoiceCol,orderCol:orderCol,customerCol:customerCol,amountCol:amountCol,rows:[]};
     for(var r=headerRow+1;r<raw.length;r++){
       var values=(raw[r]||[]).slice();
