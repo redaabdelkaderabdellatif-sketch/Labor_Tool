@@ -85,9 +85,9 @@
     ws['!autofilter']={ref:'A1:O'+data.length};ws['!freeze']={xSplit:0,ySplit:1};
     for(let r=2;r<=data.length;r++){const dateCell=ws[XLSX.utils.encode_cell({r:r-1,c:1})];if(dateCell&&dateCell.v instanceof Date)dateCell.z='yyyy-mm-dd';for(const c of [9,10,11,12,13]){const cell=ws[XLSX.utils.encode_cell({r:r-1,c})];if(cell&&typeof cell.v==='number')cell.z='#,##0.00;[Red]-#,##0.00'}}
     XLSX.utils.book_append_sheet(wb,ws,'مستر شيت');
-    const file='مستر_مشتريات_الأصناف_والموردين_'+(from?iso(from):'')+'_'+(to?iso(to):'')+'.xlsx';XLSX.writeFile(wb,file,{compression:true});el('runStatus').className='status success';el('runStatus').textContent='تم تنزيل المستر شيت: '+file+' — '+invoices.length+' فاتورة، '+returns.length+' مرتجع، '+(data.length-1)+' حركة.';
+    const file='مستر_مشتريات_الأصناف_والموردين_'+(from?iso(from):'')+'_'+(to?iso(to):'')+'.xlsx';const bytes=XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true});const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);el('runStatus').className='status success';el('runStatus').textContent='بدأ تنزيل المستر شيت: '+file+' — '+invoices.length+' فاتورة، '+returns.length+' مرتجع، '+(data.length-1)+' حركة.';
   }
-  el('invoiceFile').addEventListener('change',()=>loadFile('invoiceFile','invoice'));el('returnFile').addEventListener('change',()=>loadFile('returnFile','return'));el('itemFile').addEventListener('change',()=>loadFile('itemFile','items'));el('generateBtn').addEventListener('click',runReport);setFileStatus();
+  el('invoiceFile').addEventListener('change',()=>loadFile('invoiceFile','invoice'));el('returnFile').addEventListener('change',()=>loadFile('returnFile','return'));el('itemFile').addEventListener('change',()=>loadFile('itemFile','items'));el('generateBtn').addEventListener('click',()=>{try{runReport()}catch(err){el('runStatus').className='status error';el('runStatus').textContent='تعذر إنشاء الملف: '+(err&&err.message?err.message:'خطأ غير معروف');}});setFileStatus();
 })();
 </script>
 </body>
