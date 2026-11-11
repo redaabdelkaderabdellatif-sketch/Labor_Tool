@@ -8,37 +8,111 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f8f9fa;--panel:#fff;--ink:#212529;--primary:#714b67;--border:#e0e0e0;--muted:#6c757d;--ok:#16864a;--danger:#c0392b;--soft:#f7f5f7}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:'Tajawal',sans-serif;line-height:1.55}.page{max-width:1150px;margin:22px auto;padding:0 16px}.title{font:800 22px 'Cairo',sans-serif;color:var(--primary);margin:0 0 4px}.intro{margin:0 0 18px;color:var(--muted)}.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;margin:0 0 14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}.card h2{font:700 17px 'Cairo',sans-serif;color:var(--primary);margin:0 0 12px}.uploads{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.upload{display:block;padding:18px;border:1px dashed #b8a7b3;border-radius:10px;background:var(--soft);cursor:pointer}.upload strong{display:block;margin-bottom:4px}.upload small{display:block;color:var(--muted);min-height:42px}.upload input{display:block;width:100%;margin-top:12px;font:inherit}.filename{font-size:13px;color:var(--ok);margin-top:8px;overflow-wrap:anywhere}.period{display:flex;flex-wrap:wrap;align-items:end;gap:12px}.field{display:grid;gap:5px;min-width:190px}.field input{padding:10px;border:1px solid var(--border);border-radius:8px;font:inherit}.btn{border:0;border-radius:8px;background:var(--primary);color:#fff;padding:12px 18px;font:700 15px 'Tajawal',sans-serif;cursor:pointer}.btn:disabled{opacity:.45;cursor:not-allowed}.note{color:#66545f;background:#f4eff3;border-radius:8px;padding:10px 12px;margin-top:12px;font-size:14px}.status{min-height:24px;margin-top:10px;font-size:14px}.status.error{color:var(--danger)}.status.success{color:var(--ok)}.counts{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.pill{background:#f4f4f6;border:1px solid var(--border);padding:5px 10px;border-radius:99px;font-size:13px}.reports{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.report{border:1px solid var(--border);border-radius:9px;padding:14px}.report b{display:block;color:var(--primary);margin-bottom:4px}footer{text-align:center;color:var(--muted);padding:12px;font-size:13px}@media(max-width:600px){.page{padding:0 10px;margin-top:14px}.card{padding:14px}.field{width:100%}.btn{width:100%}}
+:root{--bg:#f9fafb;--panel:#fff;--ink:#212529;--primary:#714b67;--primary-dark:#5d3e55;--border:#d8dadd;--border-soft:#e9ecef;--muted:#6c757d;--ok:#198754;--ok-bg:#d1e7dd;--danger:#dc3545;--info-bg:#cff4fc;--info-ink:#055160;--hover:#f3f4f6}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Tajawal',system-ui,sans-serif;font-size:14px;line-height:1.6}
+/* لوحة التحكم (Control panel) */
+.cp{position:sticky;top:0;z-index:10;background:var(--panel);border-bottom:1px solid var(--border)}
+.cp-in{max-width:1140px;margin:0 auto;padding:8px 16px;min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.crumb{display:flex;align-items:center;list-style:none;margin:0;padding:0;font-size:16px}
+.crumb li{display:flex;align-items:center;color:var(--primary)}
+.crumb li+li::before{content:'/';color:var(--muted);margin:0 8px}
+.crumb li.active{color:var(--ink);font-weight:700}
+/* الأزرار */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--primary);border-radius:4px;background:var(--primary);color:#fff;padding:5px 14px;min-height:32px;font:500 14px 'Tajawal',sans-serif;cursor:pointer;transition:background .12s,border-color .12s}
+.btn:hover:not(:disabled){background:var(--primary-dark);border-color:var(--primary-dark)}
+.btn:focus-visible{outline:2px solid rgba(113,75,103,.45);outline-offset:2px}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.ghost{background:#fff;color:var(--danger);border-color:var(--border);padding:2px 10px;min-height:28px;font-size:13px}
+.btn.ghost:hover:not(:disabled){background:var(--danger);border-color:var(--danger);color:#fff}
+/* ورقة النموذج (Form sheet) */
+.page{max-width:1140px;margin:16px auto 0;padding:0 16px}
+.sheet{background:var(--panel);border:1px solid var(--border);border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:24px 28px 28px}
+.oe-title small{display:block;color:var(--muted);font-size:13px}
+.title{font:700 28px/1.3 'Tajawal',sans-serif;color:var(--ink);margin:0 0 4px}
+.intro{margin:0 0 8px;color:var(--muted)}
+.sep{font-weight:700;font-size:15px;color:var(--ink);margin:26px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+/* صفوف الحقول (label + control) */
+.upload,.field{display:grid;grid-template-columns:minmax(200px,300px) 1fr;gap:6px 20px;align-items:center;padding:10px 8px;border-radius:4px;margin:0}
+.upload{cursor:pointer;border-bottom:1px solid var(--border-soft)}
+.upload:hover{background:var(--hover)}
+.upload:focus-within{background:var(--hover)}
+.lbl strong{display:block;font-weight:700}
+.lbl small{display:block;color:var(--muted);font-size:12.5px;line-height:1.5}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.upload input{font:inherit;font-size:13px;color:var(--muted);max-width:100%}
+.upload input::file-selector-button{font:500 13px 'Tajawal',sans-serif;border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:4px;padding:4px 12px;margin-inline-end:10px;cursor:pointer}
+.upload input::file-selector-button:hover{background:var(--hover);border-color:var(--primary);color:var(--primary)}
+.opt{color:var(--muted);font-weight:400;font-size:12.5px}
+.filename{display:inline-block;font-size:12px;font-weight:700;color:#0a3622;background:var(--ok-bg);border-radius:99px;padding:1px 10px;overflow-wrap:anywhere}
+.filename:empty{display:none}
+.field{font-weight:700}
+.field input{max-width:320px;padding:4px 2px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;font:400 14px 'Tajawal',sans-serif;color:var(--ink);width:100%}
+.field input:hover{border-bottom-color:#9ca3af}
+.field input:focus{outline:none;border-bottom:2px solid var(--primary);padding-bottom:3px}
+/* التنبيهات (Alerts) */
+.note{color:var(--info-ink);background:var(--info-bg);border:1px solid #b6effb;border-radius:4px;padding:10px 14px;margin-top:14px;font-size:14px}
+.note.warn{color:#842029;background:#f8d7da;border-color:#f1aeb5}
+#savedInfo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.status{min-height:22px;margin-top:10px;font-size:14px}
+.status.error{color:var(--danger);font-weight:700}
+.status.success{color:var(--ok);font-weight:700}
+/* أزرار الإحصاء (Smart buttons) */
+.counts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.counts:empty{display:none}
+.pill{min-width:120px;text-align:center;background:#fff;border:1px solid var(--border);color:var(--primary);font-weight:700;padding:6px 16px;border-radius:4px}
+/* التبويبات (Notebook) */
+.tabs{display:flex;list-style:none;margin:26px 0 0;padding:0;border-bottom:1px solid var(--border)}
+.tabs li{padding:8px 16px;color:var(--primary);font-weight:700;border-bottom:2px solid var(--primary);margin-bottom:-1px}
+.tabpane{padding:14px 4px 0}
+.tips{margin:0;padding-inline-start:20px;color:var(--ink)}
+.tips li{margin:4px 0}
+footer{text-align:center;color:var(--muted);padding:16px;font-size:13px}
+@media(max-width:640px){
+  .cp-in{padding:8px 12px}.crumb li:first-child,.crumb li:first-child+li::before{display:none}
+  .page{padding:0 8px;margin-top:8px}.sheet{padding:16px 14px 20px}.title{font-size:23px}
+  .upload,.field{grid-template-columns:1fr}.field input{max-width:none}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
+<div class="cp"><div class="cp-in">
+    <ol class="crumb"><li>Gaty Cost</li><li class="active">الأصناف والموردين</li></ol>
+    <button id="generateBtn" class="btn" type="button" disabled>تنزيل المستر شيت</button>
+  </div></div>
 <main class="page">
-  <h1 class="title">الأصناف والموردين</h1>
-  <p class="intro">ارفع تقريري فواتير المشتريات والمرتجعات لإنشاء مستر شيت واحد قابل للفلترة في Excel.</p>
-  <section class="card">
-    <h2>ملفات المصدر</h2>
-    <div class="uploads">
-      <label class="upload"><strong>تقرير فواتير المشتريات <span aria-hidden="true">*</span></strong><small>مطلوب — يحتوي على رقم الفاتورة والتاريخ والمورد والمبالغ.</small><input id="invoiceFile" type="file" accept=".xlsx,.xls,.csv"></label>
-      <label class="upload"><strong>تقرير مرتجعات المشتريات <span aria-hidden="true">*</span></strong><small>مطلوب — تُخصم المرتجعات بحسب تاريخ المرتجع، وتُربط بالمورد عبر رقم فاتورة الشراء.</small><input id="returnFile" type="file" accept=".xlsx,.xls,.csv"></label>
-      <label class="upload"><strong>تقرير مشتريات الصنف <span>(اختياري)</span></strong><small>لملء تقريري الصنف والمورد. يربط الموقع كل صنف بالمورد من خلال رقم الفاتورة.</small><input id="itemFile" type="file" accept=".xlsx,.xls,.csv"></label>
+  <div class="sheet">
+    <div class="oe-title">
+      <small>تقرير</small>
+      <h1 class="title">الأصناف والموردين</h1>
+      <p class="intro">ارفع تقريري فواتير المشتريات والمرتجعات لإنشاء مستر شيت واحد قابل للفلترة في Excel.</p>
     </div>
+
+    <div class="sep">ملفات المصدر</div>
+    <label class="upload" id="cardInvoice"><span class="lbl"><strong>تقرير فواتير المشتريات</strong><small>يحتوي على رقم الفاتورة والتاريخ والمورد والمبالغ.</small></span><span class="ctl"><input id="invoiceFile" type="file" accept=".xlsx,.xls,.csv"><span class="filename" id="nameInvoice"></span></span></label>
+    <label class="upload" id="cardReturn"><span class="lbl"><strong>تقرير مرتجعات المشتريات</strong><small>تُخصم المرتجعات بحسب تاريخ المرتجع، وتُربط بالمورد عبر رقم فاتورة الشراء.</small></span><span class="ctl"><input id="returnFile" type="file" accept=".xlsx,.xls,.csv"><span class="filename" id="nameReturn"></span></span></label>
+    <label class="upload" id="cardItem"><span class="lbl"><strong>تقرير مشتريات الصنف <span class="opt">(اختياري)</span></strong><small>لملء تقريري الصنف والمورد. يربط الموقع كل صنف بالمورد من خلال رقم الفاتورة.</small></span><span class="ctl"><input id="itemFile" type="file" accept=".xlsx,.xls,.csv"><span class="filename" id="nameItem"></span></span></label>
     <div class="note">تقرير المرتجعات لا يذكر الصنف المرتجع؛ لذلك يُخصم من إجمالي الفترة والمورد فقط، ولا يُوزّع على الأصناف.</div>
     <div id="fileStatus" class="status" aria-live="polite"></div>
     <div id="fileCounts" class="counts"></div>
-  </section>
-  <section class="card">
-    <h2>الفترة</h2>
-    <div class="period">
-      <label class="field">من تاريخ<input id="dateFrom" type="date"></label>
-      <label class="field">إلى تاريخ<input id="dateTo" type="date"></label>
-      <button id="generateBtn" class="btn" type="button" disabled>تنزيل المستر شيت</button>
-    </div>
+    <div id="savedInfo" class="note" hidden></div>
+
+    <div class="sep">الفترة</div>
+    <label class="field"><span>من تاريخ</span><input id="dateFrom" type="date"></label>
+    <label class="field"><span>إلى تاريخ</span><input id="dateTo" type="date"></label>
     <div id="runStatus" class="status" aria-live="polite"></div>
-  </section>
-  <section class="card">
-    <h2>مستر شيت واحد</h2>
-    <p>فلتر حسب التاريخ أو المورد أو رقم الفاتورة أو الصنف. تظهر الفاتورة كسطر واحد عند عدم رفع تقرير مشتريات الصنف. تظهر المرتجعات بقيمة سالبة، ولا تُوزع على الأصناف لأن تقرير المرتجعات لا يحدد الصنف.</p>
-  </section>
+
+    <ul class="tabs"><li>ماذا يحتوي المستر شيت؟</li></ul>
+    <div class="tabpane">
+      <ul class="tips">
+        <li>ورقة واحدة قابلة للفلترة حسب التاريخ أو المورد أو رقم الفاتورة أو الصنف.</li>
+        <li>تظهر الفاتورة كسطر واحد عند عدم رفع تقرير مشتريات الصنف.</li>
+        <li>تظهر المرتجعات بقيمة سالبة، ولا تُوزع على الأصناف لأن تقرير المرتجعات لا يحدد الصنف.</li>
+      </ul>
+    </div>
+  </div>
   <footer>Gaty Cost</footer>
 </main>
 <script src="xlsx.full.min.js"></script>
@@ -59,7 +133,7 @@
   function parseInvoices(rows){const h=rows.findIndex(r=>{const a=r.map(strip);return a.some(x=>x.includes('رقم الفاتوره'))&&a.some(x=>x.includes('اسم المورد')||x.includes('المورد والوصف'))&&a.some(x=>x.includes('صافي المبلغ'))});if(h<0)throw new Error('لم أجد عناوين تقرير فواتير المشتريات.');const headers=rows[h],ix={no:col(headers,['رقم الفاتورة']),date:col(headers,['تاريخ و رمز الصنف','التاريخ','تاريخ']),supplier:col(headers,['المورد والوصف','اسم المورد']),ref:col(headers,['رقم المرجع']),gross:col(headers,['مجموع المبلغ']),discount:col(headers,['مبلغ الخصم']),tax:col(headers,['مبلغ الضريبة']),net:col(headers,['صافي المبلغ'])};if(Object.values(ix).some(v=>v<0))throw new Error('بعض أعمدة الفواتير المطلوبة غير موجودة.');return rows.slice(h+1).filter(r=>displayName(r[ix.no])&&displayName(r[ix.supplier])).map(r=>({no:displayName(r[ix.no]),key:strip(r[ix.no]),date:parseDate(r[ix.date]),supplier:displayName(r[ix.supplier]),ref:displayName(r[ix.ref]),gross:number(r[ix.gross]),discount:number(r[ix.discount]),tax:number(r[ix.tax]),net:number(r[ix.net])}))}
   function parseReturns(rows){const h=rows.findIndex(r=>{const a=r.map(strip);return a.some(x=>x.includes('رقم المستند'))&&a.some(x=>x.includes('اسم المورد')||x.includes('المورد والوصف'))&&a.some(x=>x.includes('رقم الفاتوره'))&&a.some(x=>x.includes('صافي المبلغ'))});if(h<0)throw new Error('لم أجد عناوين تقرير مرتجعات المشتريات.');const headers=rows[h],ix={no:col(headers,['رقم المستند']),date:col(headers,['تاريخ و رمز الصنف','التاريخ','تاريخ']),supplier:col(headers,['المورد والوصف','اسم المورد']),net:col(headers,['صافي المبلغ']),invoice:col(headers,['رقم الفاتورة'])};if(Object.values(ix).some(v=>v<0))throw new Error('بعض أعمدة المرتجعات المطلوبة غير موجودة.');return rows.slice(h+1).filter(r=>displayName(r[ix.no])&&displayName(r[ix.supplier])).map(r=>({no:displayName(r[ix.no]),key:strip(r[ix.invoice]),date:parseDate(r[ix.date]),supplier:displayName(r[ix.supplier]),invoice:displayName(r[ix.invoice]),net:number(r[ix.net])}))}
   function parseItems(rows){const data=[];for(const r of rows){const code=displayName(r[0]),name=displayName(r[1]),invoice=displayName(r[10]);if(!code||!name||!invoice)continue;const test=strip(name);if(test.includes('المجموع')||test==='صافي المبلغ')continue;data.push({code,name,qty:number(r[2]),unit:displayName(r[3]),price:number(r[4]),gross:number(r[6]),discount:number(r[7]),tax:number(r[8]),net:number(r[9]),invoice,key:strip(invoice),date:parseDate(r[11])})}if(!data.length)throw new Error('لم أجد سطور أصناف مرتبطة برقم فاتورة في التقرير.');return data}
-  function setFileStatus(){const missing=[];if(!state.invoices)missing.push('فواتير المشتريات');if(!state.returns)missing.push('مرتجعات المشتريات');el('generateBtn').disabled=missing.length>0;const counts=[];if(state.invoices)counts.push(`<span class="pill">فواتير: ${state.invoices.length}</span>`);if(state.returns)counts.push(`<span class="pill">مرتجعات: ${state.returns.length}</span>`);if(state.items)counts.push(`<span class="pill">سطور أصناف: ${state.items.length}</span>`);el('fileCounts').innerHTML=counts.join('');if(missing.length){el('fileStatus').className='status';el('fileStatus').textContent='ارفع الملفين المطلوبين: '+missing.join(' و ')}else{el('fileStatus').className='status success';el('fileStatus').textContent=state.items?'تم تجهيز المستر شيت وتفاصيل الأصناف.':'تم تجهيز المستر شيت؛ ارفع تقرير مشتريات الصنف الاختياري لإضافة تفاصيل الأصناف.'}}
+  function setFileStatus(){[['cardInvoice','nameInvoice','invoices','invoiceName'],['cardReturn','nameReturn','returns','returnName'],['cardItem','nameItem','items','itemName']].forEach(([c,n,k,nm])=>{el(c).classList.toggle('done',!!state[k]);el(n).textContent=state[k]?'✓ '+state[nm]:''});const missing=[];if(!state.invoices)missing.push('فواتير المشتريات');if(!state.returns)missing.push('مرتجعات المشتريات');el('generateBtn').disabled=missing.length>0;const counts=[];if(state.invoices)counts.push(`<span class="pill">فواتير: ${state.invoices.length}</span>`);if(state.returns)counts.push(`<span class="pill">مرتجعات: ${state.returns.length}</span>`);if(state.items)counts.push(`<span class="pill">سطور أصناف: ${state.items.length}</span>`);el('fileCounts').innerHTML=counts.join('');if(missing.length){el('fileStatus').className='status';el('fileStatus').textContent='ارفع الملفين المطلوبين: '+missing.join(' و ')}else{el('fileStatus').className='status success';el('fileStatus').textContent=state.items?'تم تجهيز المستر شيت وتفاصيل الأصناف.':'تم تجهيز المستر شيت؛ ارفع تقرير مشتريات الصنف الاختياري لإضافة تفاصيل الأصناف.'}}
   async function loadFile(id,kind){const file=el(id).files[0];if(!file)return;el('fileStatus').className='status';el('fileStatus').textContent='جاري قراءة '+file.name+'...';try{const rows=rowsOf(await file.arrayBuffer());if(kind==='invoice'){state.invoices=parseInvoices(rows);state.invoiceName=file.name}else if(kind==='return'){state.returns=parseReturns(rows);state.returnName=file.name}else{state.items=parseItems(rows);state.itemName=file.name}el('fileStatus').className='status success';el('fileStatus').textContent='تمت قراءة '+file.name;setFileStatus()}catch(err){if(kind==='invoice')state.invoices=null;else if(kind==='return')state.returns=null;else state.items=null;setFileStatus();el('fileStatus').className='status error';el('fileStatus').textContent='تعذرت قراءة '+file.name+': '+(err.message||'خطأ غير معروف')}}
   function inPeriod(d,from,to){if(!from&&!to)return true;if(!d)return false;return(!from||d>=from)&&(!to||d<=to)}
   function sum(rows,key){return rows.reduce((s,r)=>s+(Number(r[key])||0),0)}
@@ -87,7 +161,58 @@
     XLSX.utils.book_append_sheet(wb,ws,'مستر شيت');
     const file='مستر_مشتريات_الأصناف_والموردين_'+(from?iso(from):'')+'_'+(to?iso(to):'')+'.xlsx';const bytes=XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true});const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);el('runStatus').className='status success';el('runStatus').textContent='بدأ تنزيل المستر شيت: '+file+' — '+invoices.length+' فاتورة، '+returns.length+' مرتجع، '+(data.length-1)+' حركة.';
   }
-  el('invoiceFile').addEventListener('change',()=>loadFile('invoiceFile','invoice'));el('returnFile').addEventListener('change',()=>loadFile('returnFile','return'));el('itemFile').addEventListener('change',()=>loadFile('itemFile','items'));el('generateBtn').addEventListener('click',()=>{try{runReport()}catch(err){el('runStatus').className='status error';el('runStatus').textContent='تعذر إنشاء الملف: '+(err&&err.message?err.message:'خطأ غير معروف');}});setFileStatus();
+  el('invoiceFile').addEventListener('change',()=>loadFile('invoiceFile','invoice').then(persist));el('returnFile').addEventListener('change',()=>loadFile('returnFile','return').then(persist));el('itemFile').addEventListener('change',()=>loadFile('itemFile','items').then(persist));el('generateBtn').addEventListener('click',()=>{try{runReport()}catch(err){el('runStatus').className='status error';el('runStatus').textContent='تعذر إنشاء الملف: '+(err&&err.message?err.message:'خطأ غير معروف');}});setFileStatus();
+
+  /* ===== حفظ الملفات المرفوعة حتى نهاية اليوم (IndexedDB على هذا الجهاز) =====
+     - تبقى بعد تسجيل الخروج وإغلاق الصفحة، وتُمسح تلقائيًا عند منتصف الليل (تغيّر تاريخ اليوم).
+     - تُحفظ نتيجة قراءة التقارير فقط، وتبقى على هذا المتصفح ولا تُرسل لأي مكان.
+     - لا تُعرض إلا بعد اجتياز فحص تسجيل الدخول والصلاحية أعلاه. */
+  const DB_NAME='gaty-items-suppliers',STORE='kv',KEY='uploads';
+  let savedDay='',saveFailed=false;
+  const todayKey=()=>iso(new Date());
+  function openDb(){return new Promise((res,rej)=>{if(!window.indexedDB)return rej(new Error('IndexedDB غير متاح'));const q=indexedDB.open(DB_NAME,1);q.onupgradeneeded=()=>q.result.createObjectStore(STORE);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+  async function dbOp(mode,fn){const db=await openDb();try{return await new Promise((res,rej)=>{const tx=db.transaction(STORE,mode),r=fn(tx.objectStore(STORE));tx.oncomplete=()=>res(r&&r.result);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error)})}finally{db.close()}}
+  function renderSaved(){
+    const box=el('savedInfo'),names=[state.invoices&&state.invoiceName,state.returns&&state.returnName,state.items&&state.itemName].filter(Boolean);
+    if(!names.length){box.hidden=true;box.innerHTML='';return}
+    box.hidden=false;box.className='note'+(saveFailed?' warn':'');
+    box.textContent='';
+    const t=document.createElement('span');
+    t.textContent=saveFailed?'تعذر حفظ الملفات في المتصفح؛ ستضيع عند إغلاق الصفحة. ('+names.join(' • ')+')':'الملفات محفوظة على هذا الجهاز حتى نهاية اليوم، حتى لو سجلت الخروج: '+names.join(' • ');
+    const b=document.createElement('button');b.type='button';b.className='btn ghost';b.textContent='مسح الملفات المحفوظة';b.addEventListener('click',()=>clearSaved('تم مسح الملفات المحفوظة.'));
+    box.append(t,b);
+  }
+  async function persist(){
+    try{
+      if(!state.invoices&&!state.returns&&!state.items){await dbOp('readwrite',s=>s.delete(KEY));savedDay=''}
+      else{const day=todayKey();await dbOp('readwrite',s=>s.put({day,invoices:state.invoices,returns:state.returns,items:state.items,invoiceName:state.invoiceName,returnName:state.returnName,itemName:state.itemName,savedAt:Date.now()},KEY));savedDay=day}
+      saveFailed=false;
+    }catch(_){saveFailed=true}
+    renderSaved();
+  }
+  async function clearSaved(message){
+    state.invoices=state.returns=state.items=null;state.invoiceName=state.returnName=state.itemName='';savedDay='';
+    ['invoiceFile','returnFile','itemFile'].forEach(id=>{el(id).value=''});
+    try{await dbOp('readwrite',s=>s.delete(KEY));saveFailed=false}catch(_){}
+    setFileStatus();renderSaved();
+    if(message){el('fileStatus').className='status';el('fileStatus').textContent=message}
+  }
+  async function restoreSaved(){
+    try{
+      const s=await dbOp('readonly',st=>st.get(KEY));
+      if(!s)return;
+      if(s.day!==todayKey()){await clearSaved();return}
+      if(state.invoices||state.returns||state.items)return; /* المستخدم رفع ملفات قبل اكتمال الاسترجاع */
+      state.invoices=s.invoices||null;state.returns=s.returns||null;state.items=s.items||null;
+      state.invoiceName=s.invoiceName||'';state.returnName=s.returnName||'';state.itemName=s.itemName||'';savedDay=s.day;
+      setFileStatus();renderSaved();
+      el('fileStatus').className='status success';el('fileStatus').textContent='تم استرجاع ملفات اليوم المحفوظة. يمكنك رفع ملف جديد ليحل محل القديم.';
+    }catch(_){}
+  }
+  function checkDayChange(){if(savedDay&&savedDay!==todayKey())clearSaved('انتهى اليوم؛ تم مسح الملفات المحفوظة. ارفع ملفات اليوم الجديد.')}
+  function scheduleMidnight(){const n=new Date(),next=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,0,0,1);setTimeout(()=>{checkDayChange();scheduleMidnight()},next-n)}
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkDayChange()});
+  scheduleMidnight();restoreSaved();
 })();
 </script>
 </body>
