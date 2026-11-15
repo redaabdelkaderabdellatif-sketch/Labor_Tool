@@ -20,8 +20,8 @@
     return;
   }
   docs.stock = html
-    .replace(wipButton, wipButton + '\\n  ' + statementButton)
+    .replace(wipButton, wipButton + ' ' + statementButton)
     .replace(finishedPanel, statementPanel + finishedPanel)
-    .replace(showWip, showWip + `\\n  document.getElementById('invtab-wip-statement').style.display = name === 'wip-statement' ? 'block' : 'none';`)
-    .replace(activeWip, activeWip + `\\n  document.getElementById('invtabbtn-wip-statement').classList.toggle('active', name === 'wip-statement');`);
+    .replace(showWip, showWip + ` document.getElementById('invtab-wip-statement').style.display = name === 'wip-statement' ? 'block' : 'none';`)
+    .replace(activeWip, activeWip + ` document.getElementById('invtabbtn-wip-statement').classList.toggle('active', name === 'wip-statement');`);
 })();
