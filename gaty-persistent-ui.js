@@ -370,6 +370,7 @@
     if (observerTimers.has(doc)) clearTimeout(observerTimers.get(doc));
     observerTimers.set(doc, setTimeout(function () {
       observerTimers.delete(doc);
+      if (authenticatedForTools() && !doc.getElementById('gaty-persist-tools')) addToolbar(doc);
       applyOverrides(doc);
       markEditTargets(doc);
       restoreInputs(doc);
