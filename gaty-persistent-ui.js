@@ -30,9 +30,8 @@
     });
     return dbPromise;
   }
-  function transaction(db, stores, mode) {
+  function waitForTransaction(tx) {
     return new Promise(function (resolve, reject) {
-      var tx = db.transaction(stores, mode);
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error || new Error('Storage transaction failed')); };
       tx.onabort = function () { reject(tx.error || new Error('Storage transaction aborted')); };
@@ -41,8 +40,15 @@
   function pageScope(doc) {
     var win = doc.defaultView;
     var path = '';
-    try { path = win.location.pathname; } catch (_) {}
-    if (path && path !== 'about:srcdoc' && path !== 'about:blank') return path;
+    var href = '';
+    try { href = win.location.href; path = win.location.pathname; } catch (_) {}
+    if (href.indexOf('about:srcdoc') === 0 || href === 'about:blank') {
+      try {
+        var frame = win.frameElement;
+        if (frame) return 'srcdoc:' + (frame.id || frame.getAttribute('title') || 'frame');
+      } catch (_) {}
+    }
+    if (path) return path;
     try {
       var frame = win.frameElement;
       if (frame) return 'srcdoc:' + (frame.id || frame.getAttribute('title') || 'frame');
@@ -141,7 +147,7 @@
       var tx = db.transaction(['uploads', 'slots'], 'readwrite');
       tx.objectStore('uploads').add(record);
       tx.objectStore('slots').put({ slotKey: slotKey, uploadId: record.id });
-      return transaction(db, ['uploads', 'slots'], 'readwrite');
+      return waitForTransaction(tx);
     }).then(function () {
       status(doc, 'تم حفظ ' + list.map(function (file) { return file.name; }).join('، '));
     }).catch(function (error) {
@@ -228,14 +234,10 @@
   function markEditTargets(doc) {
     doc.querySelectorAll('[data-gaty-edit-target]').forEach(function (el) {
       el.removeAttribute('data-gaty-edit-target');
-      el.style.outline = '';
-      el.style.cursor = '';
     });
     if (!editMode) return;
     textCandidates(doc).forEach(function (item) {
       item.el.setAttribute('data-gaty-edit-target', '1');
-      item.el.style.outline = '2px dashed #714b67';
-      item.el.style.cursor = 'text';
     });
   }
   function startEdit(item, event, doc) {
@@ -256,7 +258,7 @@
     if (doc.getElementById('gaty-persist-style')) return;
     var style = doc.createElement('style');
     style.id = 'gaty-persist-style';
-    style.textContent = '#gaty-persist-tools{position:fixed;z-index:2147483646;left:10px;bottom:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:calc(100vw - 20px);font:12px Arial,sans-serif}#gaty-persist-tools button{border:1px solid #714b67;border-radius:7px;background:#714b67;color:#fff;padding:7px 10px;cursor:pointer}#gaty-persist-status{background:#fff;border:1px solid #ddd;border-radius:7px;padding:6px 8px;max-width:260px;box-shadow:0 2px 8px #0002}[data-gaty-edit-target="1"]:hover{background:#f4edf3!important}#gaty-persist-modal{position:fixed;inset:0;z-index:2147483647;background:#0006;display:none;align-items:center;justify-content:center;padding:16px;font:14px Arial,sans-serif}#gaty-persist-modal.open{display:flex}#gaty-persist-modal .gaty-panel{background:#fff;color:#222;width:min(760px,100%);max-height:85vh;overflow:auto;border-radius:12px;padding:16px;box-shadow:0 8px 32px #0003}#gaty-persist-modal h2{margin:0 0 12px}#gaty-persist-modal .gaty-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #eee}#gaty-persist-modal .gaty-row button{background:#fff;color:#714b67}';
+    style.textContent = '#gaty-persist-tools{position:fixed;z-index:2147483646;left:10px;bottom:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:calc(100vw - 20px);font:12px Arial,sans-serif}#gaty-persist-tools button{border:1px solid #714b67;border-radius:7px;background:#714b67;color:#fff;padding:7px 10px;cursor:pointer}[data-gaty-edit-target="1"]{outline:2px dashed #714b67;cursor:text}[data-gaty-edit-target="1"]:hover{background:#f4edf3!important}#gaty-persist-status{background:#fff;border:1px solid #ddd;border-radius:7px;padding:6px 8px;max-width:260px;box-shadow:0 2px 8px #0002}[data-gaty-edit-target="1"]:hover{background:#f4edf3!important}#gaty-persist-modal{position:fixed;inset:0;z-index:2147483647;background:#0006;display:none;align-items:center;justify-content:center;padding:16px;font:14px Arial,sans-serif}#gaty-persist-modal.open{display:flex}#gaty-persist-modal .gaty-panel{background:#fff;color:#222;width:min(760px,100%);max-height:85vh;overflow:auto;border-radius:12px;padding:16px;box-shadow:0 8px 32px #0003}#gaty-persist-modal h2{margin:0 0 12px}#gaty-persist-modal .gaty-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #eee}#gaty-persist-modal .gaty-row button{background:#fff;color:#714b67}';
     (doc.head || doc.documentElement).appendChild(style);
   }
   function getRecords() {
@@ -272,7 +274,7 @@
     return openDb().then(function (db) {
       var tx = db.transaction('slots', 'readwrite');
       tx.objectStore('slots').put({ slotKey: record.slotKey, uploadId: record.id });
-      return transaction(db, ['slots'], 'readwrite');
+      return waitForTransaction(tx);
     }).then(function () {
       var found = fileInputs(doc).find(function (input, index) { return inputKey(input, index, doc) === record.slotKey; });
       if (found) setInputFiles(found, record.files);
@@ -285,16 +287,26 @@
     if (!list) return;
     list.textContent = 'جارٍ تحميل الملفات...';
     getRecords().then(function (records) {
+      list.textContent = '';
       if (!records.length) { list.textContent = 'لا توجد ملفات محفوظة بعد.'; return; }
-      list.innerHTML = records.slice(0, 100).map(function (record) {
+      records.slice(0, 100).forEach(function (record) {
         var names = record.files.map(function (file) { return file.name; }).join('، ');
         var date = new Date(record.savedAt).toLocaleString();
         var label = (record.pageTitle || record.page || 'Gaty') + ' — ' + (record.label || record.inputId || 'ملف');
         var row = doc.createElement('div');
         row.className = 'gaty-row';
-        row.innerHTML = '<span></span><button type="button">استعادة</button>';
-        row.firstChild.textContent = label + ' — ' + names + ' — ' + date;
-        row.lastChild.addEventListener('click', function () { restoreRecord(record, doc).catch(function (error) { status(doc, 'تعذرت الاستعادة: ' + error.message, true); }); });
+        var description = doc.createElement('span');
+        description.textContent = label + ' — ' + names + ' — ' + date;
+        var restore = doc.createElement('button');
+        restore.type = 'button';
+        restore.textContent = 'استعادة';
+        restore.addEventListener('click', function () {
+          restoreRecord(record, doc).catch(function (error) {
+            status(doc, 'تعذرت الاستعادة: ' + error.message, true);
+          });
+        });
+        row.appendChild(description);
+        row.appendChild(restore);
         list.appendChild(row);
       });
     }).catch(function (error) { list.textContent = 'تعذر قراءة الملفات: ' + error.message; });
@@ -371,9 +383,6 @@
   }
 
   initDocument(document);
-  document.addEventListener('change', function (event) {
-    if (event.target && event.target.matches && event.target.matches('input[type="file"]')) saveInput(event.target);
-  }, true);
   var outerObserver = new MutationObserver(function () {
     document.querySelectorAll('iframe').forEach(function (frame) {
       try {
