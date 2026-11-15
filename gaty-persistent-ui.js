@@ -9,6 +9,7 @@
   var OVERRIDES_KEY = 'gaty_ui_text_overrides_v1';
   var dbPromise = null;
   var restoring = new WeakSet();
+  var restorePending = new WeakSet();
   var editMode = false;
   var observerTimers = new WeakMap();
 
@@ -114,15 +115,16 @@
   function restoreInputs(doc) {
     var inputs = fileInputs(doc);
     inputs.forEach(function (input, index) {
-      if (input.files && input.files.length) return;
+      if ((input.files && input.files.length) || restorePending.has(input)) return;
       var slotKey = inputKey(input, index, doc);
+      restorePending.add(input);
       latestFor(slotKey).then(function (record) {
         if (!record || !record.files || !record.files.length || !input.isConnected) return;
         setInputFiles(input, record.files);
         status(doc, 'استُعيد الملف: ' + record.files.map(function (file) { return file.name; }).join('، '));
       }).catch(function (error) {
         status(doc, 'تعذر فتح أرشيف الملفات: ' + error.message, true);
-      });
+      }).finally(function () { restorePending.delete(input); });
     });
   }
   function saveInput(input) {
@@ -351,6 +353,7 @@
       observerTimers.delete(doc);
       applyOverrides(doc);
       markEditTargets(doc);
+      restoreInputs(doc);
     }, 120));
   }
   function initDocument(doc) {
