@@ -65,7 +65,7 @@
     return { docs: records.map(item => ({ id: item.id, data: () => item.value })) };
   }
   const SHARED_CORRECTIONS_KEY = 'gaty_inventory_cost_reference_corrections_v1';
-  const normCorrection = value => String(value ?? '').normalize('NFKC').replace(/\\s+/g, '').trim().toUpperCase();
+  const normCorrection = value => String(value ?? '').normalize('NFKC').replace(/\s+/g, '').trim().toUpperCase();
   const correctionDocId = wrong => 'm_' + encodeURIComponent(String(wrong ?? '')).replace(/%/g, '_');
   function readSharedCorrections() {
     try {
