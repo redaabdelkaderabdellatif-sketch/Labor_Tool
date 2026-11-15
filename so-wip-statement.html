@@ -1,0 +1,448 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><link rel="stylesheet" href="odoo-theme.css?v=20261111-odoo1"></head><body>
+<title>مطابقة التكلفة التامة</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* Layout: one narrow column — upload strip on top, status tabs as the summary, one wide ledger-style table below. */
+:root{
+  --bg:#f3f6f6; --surface:#ffffff; --ink:#14282b; --muted:#5d7276; --line:#d9e2e3;
+  --accent:#0f766e; --accent-ink:#ffffff; --accent-soft:#dff1ee;
+  --ok:#1b7f4b; --ok-bg:#dcf3e5;
+  --warn:#9a5b00; --warn-bg:#fdeccb;
+  --bad:#b42318; --bad-bg:#fde3e0;
+  --none:#475b73; --none-bg:#e4ebf3;
+  --font:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1819; --surface:#152325; --ink:#e3eeee; --muted:#93a9ac; --line:#26393b;
+  --accent:#3fb8aa; --accent-ink:#06201d; --accent-soft:#17363a;
+  --ok:#62d29a; --ok-bg:#15372a; --warn:#f0b75a; --warn-bg:#3a2d12;
+  --bad:#ff8b7f; --bad-bg:#3d1f1c; --none:#9db4d0; --none-bg:#1c2b3c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1819; --surface:#152325; --ink:#e3eeee; --muted:#93a9ac; --line:#26393b;
+  --accent:#3fb8aa; --accent-ink:#06201d; --accent-soft:#17363a;
+  --ok:#62d29a; --ok-bg:#15372a; --warn:#f0b75a; --warn-bg:#3a2d12;
+  --bad:#ff8b7f; --bad-bg:#3d1f1c; --none:#9db4d0; --none-bg:#1c2b3c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.6;
+  padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-size:26px;margin:0;line-height:1.3;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;max-width:70ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.drop{display:flex;flex-direction:column;gap:14px;border:2px dashed var(--line);border-radius:10px;padding:22px;align-items:center;text-align:center;transition:.15s}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.btn{font:inherit;font-weight:600;background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:9px 18px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,th button:focus-visible,tr.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;width:100%}
+.slot{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:10px 14px;text-align:start;min-width:0}
+.slot b{display:block;font-size:14px}
+.slot span{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--line);flex:none}
+.slot.ok .dot{background:var(--ok)}
+.settings{display:flex;flex-wrap:wrap;gap:16px;align-items:end}
+.settings label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+input[type=number],input[type=search]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:130px}
+input[type=search]{width:min(280px,100%)}
+.msg{color:var(--bad);font-weight:500}
+.steps{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;text-align:start;width:100%}
+.steps li{background:var(--bg);border-radius:8px;padding:12px 14px;font-size:14px}
+.steps code{font-family:var(--mono);font-size:13px;direction:ltr;unicode-bidi:isolate;background:var(--accent-soft);padding:1px 6px;border-radius:4px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab{font:inherit;display:flex;flex-direction:column;align-items:flex-start;gap:0;min-width:128px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer;text-align:start}
+.tab .n{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
+.tab .l{font-size:13px;color:var(--muted)}
+.tab[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.tab.s-ok .n{color:var(--ok)}.tab.s-diff .n{color:var(--warn)}.tab.s-nocredit .n{color:var(--none)}.tab.s-nolink .n,.tab.s-orphan .n,.tab.s-costonly .n{color:var(--bad)}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);max-height:70vh}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:9px 12px;text-align:start;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{position:sticky;top:0;background:var(--surface);z-index:2;font-size:13px;color:var(--muted);font-weight:600;border-bottom:2px solid var(--line)}
+th button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;font-weight:inherit;padding:0}
+td.num{direction:ltr;text-align:right}th.num{text-align:right}
+.mono{font-family:var(--mono);font-size:14px;direction:ltr;unicode-bidi:isolate}
+tr.row{cursor:pointer}
+tr.row:hover td{background:var(--bg)}
+.pill{display:inline-block;border-radius:99px;padding:1px 10px;font-size:13px;font-weight:600}
+.p-ok{background:var(--ok-bg);color:var(--ok)}.p-diff{background:var(--warn-bg);color:var(--warn)}
+.p-nocredit{background:var(--none-bg);color:var(--none)}.p-nolink,.p-orphan,.p-costonly{background:var(--bad-bg);color:var(--bad)}
+.diffpos{color:var(--ok)}.diffneg{color:var(--bad)}
+tr.det td{background:var(--bg);white-space:normal;padding:14px}
+.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.dg h4{margin:0 0 6px;font-size:14px}
+.dg table{font-size:13px}.dg th,.dg td{padding:5px 8px}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.hint{color:var(--muted);font-size:13px}
+.map-list{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.map-list li{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:4px 6px 4px 12px}
+.map-list button{font:inherit;background:none;border:0;color:var(--bad);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px}
+.map-add{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-block:12px}
+.map-add input[type=text]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:210px;max-width:100%}
+.map-add label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.tag{font-size:12px;color:var(--accent);background:var(--accent-soft);border-radius:99px;padding:0 8px;margin-inline-start:6px;font-family:var(--font)}
+.arch td{white-space:normal}
+.arch .sm{color:var(--muted);font-size:13px}
+.arch .acts{display:flex;gap:6px;flex-wrap:wrap}
+.arch .acts .btn{padding:4px 12px;font-size:13px}
+@media (max-width:520px){h1{font-size:22px}.tab{min-width:calc(50% - 4px)}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>مطابقة مدين التحويلات مع دائن التكلفة التامة</h1>
+    <p class="sub">ارفع ملف الـ WIP وشيت التكلفة التامة. الموقع يجمع مدين كل رقم طلب، يدور عليه في شيت التكلفة، ويقارن بدائن مستند التكلفة.</p>
+  </header>
+
+  <section class="panel" aria-label="رفع الملفات">
+    <div class="drop" id="drop">
+      <ul class="steps" id="steps">
+        <li><b>١. الطلب من الوصف</b><br>ياخد كل اللي بعد الشرطة في الوصف زي ما هو (<code>0006-278</code> أو <code>QUTO 0006-6</code>) ويجمع مدينه.</li>
+        <li><b>٢. شيت التكلفة</b><br>يدور على الرقم في عمود رقم الطلب، ويجيب رقم مستند التكلفة جنبه.</li>
+        <li><b>٣. الدائن</b><br>يقارن دائن المستند (زي <code>0006-322</code>) بمجموع المدين، والفرق يظهر بالجدول.</li>
+      </ul>
+      <div>
+        <input type="file" id="file" accept=".xlsx,.xls,.xlsm" multiple hidden>
+        <button class="btn" id="pick" type="button">اختر الملفين</button>
+        <span class="hint">أو اسحبهم هنا. الترتيب مش مهم.</span>
+      </div>
+      <div class="slots">
+        <div class="slot" id="slotL"><i class="dot"></i><div><b>ملف WIP (دفتر الأستاذ)</b><span id="nameL">لم يُرفع بعد</span></div></div>
+        <div class="slot" id="slotC"><i class="dot"></i><div><b>شيت التكلفة التامة</b><span id="nameC">لم يُرفع بعد</span></div></div>
+      </div>
+      <div class="msg" id="err" role="alert"></div>
+    </div>
+  </section>
+
+  <section class="panel settings" id="settings" hidden aria-label="إعدادات التقريب">
+    <label>أقصى فرق مسموح (نسبة %)<input type="number" id="pct" value="3" min="0" step="0.5"></label>
+    <label>أو فرق ثابت بالمبلغ<input type="number" id="abs" value="2" min="0" step="0.5"></label>
+    <span class="hint">يُحسب المطابق لو الفرق أقل من الأكبر بين الاثنين.</span>
+  </section>
+
+  <section class="panel" aria-label="تعديل أرقام الطلبات">
+    <h2 style="font-size:17px;margin:0 0 4px">تعديل أرقام الطلبات</h2>
+    <p class="hint" style="margin:0">لو رقم الطلب في الوصف مكتوب غلط أو بإسم (زي QADI TOWER)، اكتب الرقم الصح. التعديلات تتحفظ وتتطبق تلقائياً كل ما ترفع الملف.</p>
+    <form class="map-add" id="mapForm">
+      <label>الرقم في الوصف<input type="text" id="mapFrom" list="mapOpts" placeholder="QADI TOWER" autocomplete="off"></label>
+      <label>الرقم الصح<input type="text" id="mapTo" placeholder="0006-34" autocomplete="off"></label>
+      <button class="btn" type="submit">حفظ التعديل</button>
+    </form>
+    <datalist id="mapOpts"></datalist>
+    <div class="hint" id="mapStatus"></div>
+    <ul class="map-list" id="mapList"></ul>
+  </section>
+
+  <section class="panel" aria-label="أرشيف الملفات">
+    <h2 style="font-size:17px;margin:0 0 4px">أرشيف الملفات</h2>
+    <p class="hint" style="margin:0">كل ملف ترفعه بيتحفظ هنا تلقائياً مع تاريخ الرفع وملخص يعرّفك محتواه. تقدر تحمّله أو تفتحه في الموقع في أي وقت.</p>
+    <div class="hint" id="archStatus" style="margin-block:8px"></div>
+    <div class="tw" style="max-height:none"><table class="arch" id="archTbl"></table></div>
+  </section>
+
+  <section id="results" hidden>
+    <div class="tabs" id="tabs" role="group" aria-label="تصفية النتائج"></div>
+    <div class="bar" style="margin-block:16px 10px">
+      <input type="search" id="q" placeholder="ابحث برقم الطلب أو المستند" aria-label="بحث">
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="hint" id="count"></span>
+        <button class="btn ghost" id="copy" type="button">نسخ الجدول لإكسل</button>
+      </div>
+    </div>
+    <div class="tw"><table id="tbl"></table></div>
+    <p class="hint" id="foot"></p>
+  </section>
+</div>
+
+<script>
+document.documentElement.dir='rtl';document.documentElement.lang='ar';
+const $=id=>document.getElementById(id);
+const clean=s=>String(s==null?'':s).replace(/[‎‏‪-‮⁦-⁩]/g,'').replace(/\s+/g,' ').trim();
+const codeRe=/\d{4}-\d+/g;
+const lastCode=s=>{const m=clean(s).match(codeRe);return m?m[m.length-1]:null};
+const normOrder=s=>{const c=clean(s);if(!c)return null;const u=c.toUpperCase();return S.map[u]||u};
+const fmt=n=>n==null?'':n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fdate=d=>d instanceof Date?`${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`:clean(d);
+const natKey=s=>{const m=String(s).match(/^(\d+)-(\d+)$/);return m?[+m[1],+m[2]]:[9e9,0]};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const S={map:{},ledger:null,cost:null,rows:[],orphans:[],filter:'all',q:'',sort:{k:'t',dir:1}};
+const STATUS={ok:'مطابق',diff:'فرق في المبلغ',nocredit:'لا يوجد دائن',nolink:'غير موجود في التكلفة',orphan:'دائن بلا مقابل',costonly:'في التكلفة وليس في تحت التشغيل'};
+
+function sheetRows(ws){return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null})}
+function detect(wb,name){
+  let best=null;
+  for(const sn of wb.SheetNames){
+    const rows=sheetRows(wb.Sheets[sn]);
+    for(let i=0;i<Math.min(rows.length,6);i++){
+      const r=(rows[i]||[]).map(v=>clean(v).toLowerCase());
+      const d=r.indexOf('debit'),c=r.indexOf('credit');
+      if(d>-1&&c>-1){
+        const ref=r.indexOf('reference'),de=r.findIndex(x=>x.startsWith('desc')),dt=r.indexOf('date');
+        if(!best||rows.length>best.rows.length){
+          const body=rows.slice(i+1);let D=0,C=0,n=0,lo=null,hi=null;
+          for(const r2 of body){const a=+r2[d]||0,b=+r2[c]||0;if(a||b){n++;D+=a;C+=b;const x=r2[dt];if(x instanceof Date){if(!lo||x<lo)lo=x;if(!hi||x>hi)hi=x}}}
+          best={type:'ledger',name,rows:body,cols:{dt,ref,de,d,c},summary:{n,D,C,lo:lo&&lo.toISOString(),hi:hi&&hi.toISOString()}};}
+      }
+      const ci=r.findIndex(x=>/cost document\s*number/.test(x));
+      if(ci>-1&&!best){const body=rows.slice(i+1);best={type:'cost',name,rows:body,cols:{doc:ci,ord:ci+1},summary:{n:body.filter(x=>x&&x[ci]&&/\d/.test(clean(x[ci]))).length}}}
+    }
+  }
+  return best;
+}
+async function load(files,opts={}){
+  $('err').textContent='';
+  for(const f of files){
+    try{
+      const buf=await f.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array',cellDates:true});
+      const r=detect(wb,f.name);
+      if(!r){$('err').textContent=`الملف ${f.name} مش شبه ملف WIP ولا شيت التكلفة.`;continue}
+      S[r.type]=r;
+      if(!opts.fromArchive)archiveFile(f.name,buf,r);
+    }catch(e){$('err').textContent=`تعذر قراءة ${f.name}.`}
+  }
+  for(const [k,id] of [['ledger','L'],['cost','C']]){
+    $('name'+id).textContent=S[k]?S[k].name:'لم يُرفع بعد';
+    $('slot'+id).classList.toggle('ok',!!S[k]);
+  }
+  if(S.ledger&&S.cost){$('settings').hidden=false;compute()}
+}
+
+function compute(){
+  const {dt,ref,de,d,c}=S.ledger.cols;
+  const debits={},refunds={},credits={};
+  let unclass=0;
+  for(const r of S.ledger.rows){
+    const desc=clean(r[de]),dr=+r[d]||0,cr=+r[c]||0,rf=clean(r[ref]);
+    const tail=desc.includes(' - ')?desc.slice(desc.lastIndexOf(' - ')+3):'';
+    const t0=tail?tail.replace(/\s*\(?\bREFUND\b\)?\s*$/i,'').trim().toUpperCase()||null:null;
+    const t=t0?(S.map[t0]||t0):null;
+    const e={date:r[dt],ref:rf,desc,amt:0};
+    if(dr){
+      if(t){e.amt=dr;(debits[t]=debits[t]||[]).push(e)}else unclass+=dr;
+    }
+    if(cr){
+      e.amt=cr;
+      if(/عينصتلا|production process/i.test(desc)) (credits[rf]=credits[rf]||[]).push(e);
+      else if(t){(refunds[t]=refunds[t]||[]).push(e)}
+    }
+  }
+  const docsByOrder={},allDocs=new Set(),orderOfDoc={},costRows=[];
+  for(const r of S.cost.rows){
+    const doc=clean(r[S.cost.cols.doc]);if(!doc||!/\d/.test(doc))continue;
+    allDocs.add(doc);
+    const o=normOrder(r[S.cost.cols.ord]);
+    costRows.push({doc,o,item:clean(r[S.cost.cols.ord+1]),date:r[S.cost.cols.ord+2]});
+    if(o){(docsByOrder[o]=docsByOrder[o]||new Set()).add(doc);orderOfDoc[doc]=o}
+  }
+  const sum=a=>(a||[]).reduce((s,x)=>s+x.amt,0);
+  const pct=(+$('pct').value||0)/100,abs=+$('abs').value||0;
+  const rows=[];
+  for(const t of Object.keys(debits)){
+    const dl=debits[t],rl=refunds[t]||[];
+    const docs=[...(docsByOrder[t]||[])];
+    const debit=sum(dl),refund=sum(rl),net=debit-refund;
+    const cl=docs.flatMap(x=>credits[x]||[]);
+    const credit=sum(cl),diff=credit-net;
+    let st;
+    if(!docs.length)st='nolink';
+    else if(!cl.length)st='nocredit';
+    else st=Math.abs(diff)<=Math.max(abs,pct*Math.abs(net))?'ok':'diff';
+    rows.push({t,dl,rl,cl,docs,debit,refund,net,credit,diff:docs.length&&cl.length?diff:null,st});
+  }
+  // credits with nothing behind them
+  const orphans=[];
+  for(const doc of Object.keys(credits)){
+    const o=orderOfDoc[doc];
+    let why=null;
+    if(!allDocs.has(doc))why='المستند غير موجود في شيت التكلفة';
+    else if(!o)why='لا يوجد رقم طلب للمستند في شيت التكلفة';
+    else if(!debits[o])why=`لا يوجد مدين على الطلب ${o}`;
+    if(why){const cr=credits[doc];orphans.push({t:doc,docs:o?[o]:[],credit:sum(cr),cl:cr,dl:[],rl:[],why,st:'orphan',debit:null,refund:0,net:null,diff:null})}
+  }
+  const skip=/^(SAMPLE|DELETE|N\/A|#N\/A)$/;
+  const byO={};
+  costRows.filter(x=>x.o&&!skip.test(x.o)&&!debits[x.o]).forEach(x=>{(byO[x.o]=byO[x.o]||new Set()).add(x.doc)});
+  for(const o of Object.keys(byO)){
+    const docs=[...byO[o]],cl=docs.flatMap(d=>credits[d]||[]);
+    rows.push({t:o,dl:[],rl:[],cl,docs,debit:0,refund:0,net:0,credit:sum(cl),diff:null,st:'costonly'});
+  }
+  S.skipped=costRows.filter(x=>!x.o||skip.test(x.o)).length;
+  $('mapOpts').innerHTML=Object.keys(debits).filter(k=>!docsByOrder[k]).sort().map(k=>`<option value="${esc(k)}">`).join('');
+  S.rows=rows;S.orphans=orphans;S.unclass=unclass;
+  render();
+}
+
+function visible(){
+  const q=S.q.toLowerCase();
+  let list=S.filter==='orphan'?S.orphans:S.rows;
+  if(S.filter!=='all'&&S.filter!=='orphan')list=list.filter(r=>r.st===S.filter);
+  if(q)list=list.filter(r=>r.t.toLowerCase().includes(q)||r.docs.some(x=>x.toLowerCase().includes(q)));
+  const {k,dir}=S.sort;
+  const val=r=>k==='t'?natKey(r.t):k==='abs'?Math.abs(r.diff??-1):(r[k]??-1);
+  return [...list].sort((a,b)=>{
+    const x=val(a),y=val(b);
+    if(Array.isArray(x))return (x[0]-y[0]||x[1]-y[1])*dir;
+    return (x-y)*dir;
+  });
+}
+function renderTabs(){
+  const c={all:S.rows.length,ok:0,diff:0,nocredit:0,nolink:0,costonly:0};
+  S.rows.forEach(r=>c[r.st]++);
+  const defs=[['all','كل الطلبات',c.all],['ok','مطابق',c.ok],['diff','فرق في المبلغ',c.diff],['nocredit','لا يوجد دائن',c.nocredit],['nolink','غير موجود في التكلفة',c.nolink],['orphan','دائن بلا مقابل',S.orphans.length],['costonly','في التكلفة فقط',c.costonly]];
+  $('tabs').innerHTML=defs.map(([k,l,n])=>`<button type="button" class="tab s-${k}" data-f="${k}" aria-pressed="${S.filter===k}"><span class="n">${n}</span><span class="l">${l}</span></button>`).join('');
+}
+function head(){
+  const th=(k,l,cls='')=>`<th class="${cls}"><button type="button" data-s="${k}">${l}${S.sort.k===k?(S.sort.dir>0?' ▲':' ▼'):''}</button></th>`;
+  if(S.filter==='orphan')return `<thead><tr><th>مستند التكلفة</th><th>رقم الطلب في الشيت</th><th class="num">الدائن</th><th>السبب</th></tr></thead>`;
+  return `<thead><tr>${th('t','رقم الطلب')}<th>مستند التكلفة</th>${th('debit','المدين','num')}${th('refund','مرتجع','num')}${th('credit','الدائن','num')}${th('abs','الفرق','num')}<th>الحالة</th></tr></thead>`;
+}
+function detail(r){
+  const t=(a,cols)=>a.length?`<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${a.map(x=>`<tr><td>${fdate(x.date)}</td><td class="mono">${esc(x.ref)}</td><td class="num">${fmt(x.amt)}</td></tr>`).join('')}</tbody></table>`:'<span class="hint">لا يوجد</span>';
+  return `<tr class="det"><td colspan="7"><div class="dg"><div><h4>تفاصيل المدين (${r.dl.length})</h4>${t(r.dl,['التاريخ','المرجع','المبلغ'])}</div><div><h4>تفاصيل الدائن (${r.cl.length})</h4>${t(r.cl,['التاريخ','المرجع','المبلغ'])}</div>${r.rl.length?`<div><h4>مرتجع (${r.rl.length})</h4>${t(r.rl,['التاريخ','المرجع','المبلغ'])}</div>`:''}</div></td></tr>`;
+}
+const open=new Set();
+let MAPPED=new Set();
+function render(){
+  $('results').hidden=false;
+  renderTabs();
+  const list=visible();
+  $('tbl').innerHTML=head();
+  const tb=document.createElement('tbody');
+  if(!list.length)tb.innerHTML=`<tr><td colspan="7" class="empty">لا توجد نتائج.</td></tr>`;
+  else if(S.filter==='orphan')tb.innerHTML=list.map(r=>`<tr><td class="mono">${esc(r.t)}</td><td class="mono">${r.docs.join('، ')||'—'}</td><td class="num">${fmt(r.credit)}</td><td>${esc(r.why)}</td></tr>`).join('');
+  else tb.innerHTML=list.map(r=>{
+    const dcls=r.diff==null?'':Math.abs(r.diff)<0.005?'':r.diff>0?'diffpos':'diffneg';
+    return `<tr class="row" tabindex="0" data-t="${esc(r.t)}"><td class="mono">${esc(r.t)}${MAPPED.has(r.t)?'<span class="tag">معدّل</span>':''}</td><td class="mono">${r.docs.join('، ')||'—'}</td><td class="num">${fmt(r.debit)}</td><td class="num">${r.refund?fmt(r.refund):'—'}</td><td class="num">${r.docs.length?fmt(r.credit):'—'}</td><td class="num ${dcls}">${r.diff==null?'—':(r.diff>0?'+':'')+fmt(r.diff)}</td><td><span class="pill p-${r.st}">${STATUS[r.st]}</span></td></tr>`+(open.has(r.t)?detail(r):'');
+  }).join('');
+  $('tbl').appendChild(tb);
+  $('count').textContent=`${list.length} صف`;
+  $('foot').textContent=`الفرق = الدائن − (المدين − المرتجع). مدين لم يُربط برقم طلب (مثل QADI TOWER): ${fmt(S.unclass)}. اضغط على أي صف لعرض تفاصيله. «في التكلفة فقط» يستثني ${S.skipped} صف في شيت التكلفة بدون رقم طلب أو مكتوب SAMPLE / DELETE.`;
+}
+
+/* ---- saved order-number fixes (db capability, falls back to this page session) ---- */
+const mapId=k=>'m_'+encodeURIComponent(k).replace(/%/g,'_');
+let mapCol=null;
+function drawMap(){
+  const ks=Object.keys(S.map);
+  $('mapList').innerHTML=ks.length?ks.map(k=>`<li><span class="mono">${esc(k)}</span><span>←</span><span class="mono">${esc(S.map[k])}</span><button type="button" data-del="${esc(k)}" aria-label="حذف التعديل">×</button></li>`).join(''):'<li class="hint" style="border:0;background:none;padding:0">لا توجد تعديلات محفوظة بعد.</li>';
+  MAPPED=new Set(Object.values(S.map));
+  if(S.ledger&&S.cost)compute();
+}
+try{const saved=JSON.parse(localStorage.getItem('so_wip_order_map')||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved))S.map=saved}catch{}
+drawMap();
+(async()=>{
+  try{
+    const db=await claude.use('db');
+    if(!db){$('mapStatus').textContent='الحفظ الدائم غير متاح هنا. التعديلات هتفضل بس طول ما الصفحة مفتوحة.';return}
+    DB=db;archCol=db.collection('archive');
+    try{ASSETS=await claude.use('assets')}catch{}
+    try{DL=await claude.use('downloads')}catch{}
+    archCol.onSnapshot(snap=>{ARCH=snap.docs.map(d=>d.data()).filter(Boolean).sort((a,b)=>String(b.uploadedAt).localeCompare(String(a.uploadedAt)));drawArch(ARCH)},()=>say('تعذر تحميل الأرشيف.'));
+    mapCol=db.collection('order_map');
+    $('mapStatus').textContent='التعديلات بتتحفظ تلقائياً.';
+    mapCol.onSnapshot(snap=>{
+      const m={};snap.docs.forEach(d=>{const x=d.data();if(x&&x.from&&x.to)m[x.from]=x.to});
+      S.map=m;drawMap();
+    },()=>{$('mapStatus').textContent='تعذر تحميل التعديلات المحفوظة.'});
+  }catch{ $('mapStatus').textContent='الحفظ الدائم غير متاح هنا.' }
+})();
+$('mapForm').onsubmit=async e=>{
+  e.preventDefault();
+  const f=clean($('mapFrom').value).toUpperCase(),t=clean($('mapTo').value).toUpperCase();
+  if(!f||!t||f===t)return;
+  S.map[f]=t;try{localStorage.setItem('so_wip_order_map',JSON.stringify(S.map))}catch{}drawMap();
+  $('mapFrom').value='';$('mapTo').value='';
+  if(mapCol){try{await mapCol.doc(mapId(f)).set({from:f,to:t})}catch{$('mapStatus').textContent='تعذر الحفظ الدائم، التعديل شغال في الجلسة دي بس.'}}
+};
+$('mapList').onclick=async e=>{
+  const b=e.target.closest('[data-del]');if(!b)return;
+  const k=b.dataset.del;delete S.map[k];try{localStorage.setItem('so_wip_order_map',JSON.stringify(S.map))}catch{}drawMap();
+  if(mapCol){try{await mapCol.doc(mapId(k)).delete()}catch{}}
+};
+/* ---- file archive (assets + db + downloads) ---- */
+let DB=null,ASSETS=null,DL=null,archCol=null;
+const toB64=u8=>{let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s)};
+const fromB64=b=>{const s=atob(b),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u};
+const hex=buf=>[...new Uint8Array(buf)].map(x=>x.toString(16).padStart(2,'0')).join('');
+const fdt=iso=>{try{return new Date(iso).toLocaleString('en-GB',{timeZone:'Asia/Riyadh',dateStyle:'short',timeStyle:'short'})}catch{return iso||''}};
+const fd=iso=>iso?fdate(new Date(iso)):'';
+const fsize=n=>n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+function say(t){$('archStatus').textContent=t}
+async function fingerprint(buf){
+  try{if(crypto&&crypto.subtle)return hex(await crypto.subtle.digest('SHA-256',buf)).slice(0,24)}catch{}
+  const u=new Uint8Array(buf);let h1=0x811c9dc5,h2=0x1b873593;
+  for(let i=0;i<u.length;i++){h1=Math.imul(h1^u[i],16777619)>>>0;h2=Math.imul(h2+u[i]+i,2246822519)>>>0}
+  return h1.toString(16).padStart(8,'0')+h2.toString(16).padStart(8,'0')+u.length.toString(16).padStart(8,'0');
+}
+async function archiveFile(name,buf,r){
+  if(!DB||!ASSETS){say('الأرشفة غير متاحة هنا، الملف اتقرا بس ما اتحفظش.');return}
+  try{
+    const id='f_'+(await fingerprint(buf));
+    const ref=archCol.doc(id);
+    const ex=await ref.get();
+    if(ex.exists){say(`${name} محفوظ في الأرشيف من قبل.`);return}
+    say(`جاري حفظ ${name}...`);
+    const up=await ASSETS.upload(new Blob([toB64(new Uint8Array(buf))],{type:'text/plain'}),{type:'text/plain'});
+    await ref.set({name,kind:r.type,size:buf.byteLength,hash:id,assetId:up.id,uploadedAt:new Date().toISOString(),summary:r.summary||{}});
+    say(`تم حفظ ${name} في الأرشيف.`);
+  }catch(e){console.warn(e);say('تعذر حفظ الملف في الأرشيف'+(e&&(e.code||e.message)?` (${e.code||e.message})`:'')+'.')}
+}
+async function archBytes(a){
+  const res=await fetch('/_blob/'+a.assetId);
+  if(!res.ok)throw new Error('fetch');
+  return fromB64((await res.text()).trim());
+}
+function summ(a){
+  const x=a.summary||{};
+  if(a.kind==='ledger')return `${(x.n||0).toLocaleString('en-US')} قيد${x.lo?` · من ${fd(x.lo)} إلى ${fd(x.hi)}`:''}<br>مدين ${fmt(x.D||0)} · دائن ${fmt(x.C||0)} · الرصيد ${fmt((x.D||0)-(x.C||0))}`;
+  return `${(x.n||0).toLocaleString('en-US')} مستند تكلفة`;
+}
+function drawArch(list){
+  const t=$('archTbl');
+  if(!list.length){t.innerHTML='<tbody><tr><td class="empty">لا توجد ملفات محفوظة بعد. أول ملف ترفعه هيتحفظ هنا.</td></tr></tbody>';return}
+  t.innerHTML='<thead><tr><th>النوع</th><th>الملف</th><th>تاريخ الرفع</th><th>المحتوى</th><th></th></tr></thead><tbody>'+list.map(a=>`<tr><td><span class="pill ${a.kind==='ledger'?'p-ok':'p-nocredit'}">${a.kind==='ledger'?'WIP':'تكلفة تامة'}</span></td><td><span class="mono">${esc(a.name)}</span><div class="sm">${fsize(a.size||0)}</div></td><td>${fdt(a.uploadedAt)}</td><td class="sm">${summ(a)}</td><td><div class="acts"><button class="btn ghost" type="button" data-dl="${esc(a.hash)}">تحميل</button><button class="btn" type="button" data-open="${esc(a.hash)}">فتح في الموقع</button></div></td></tr>`).join('')+'</tbody>';
+}
+let ARCH=[];
+$('archTbl').onclick=async e=>{
+  const b=e.target.closest('[data-dl],[data-open]');if(!b)return;
+  const a=ARCH.find(x=>x.hash===(b.dataset.dl||b.dataset.open));if(!a)return;
+  try{
+    const u8=await archBytes(a);
+    if(b.dataset.open){await load([new File([u8],a.name)],{fromArchive:true});window.scrollTo({top:0,behavior:'smooth'})}
+    else if(DL){await DL.save({filename:a.name,data:new Blob([u8])});say('تم إرسال الملف للتحميل.')}
+    else say('التحميل غير متاح هنا. استخدم "فتح في الموقع".');
+  }catch(err){say('تعذر جلب الملف من الأرشيف'+(err&&err.code?` (${err.code})`:'')+'.')}
+};
+drawArch([]);
+$('pick').onclick=()=>$('file').click();
+$('file').onchange=e=>load([...e.target.files]);
+const drop=$('drop');
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>load([...e.dataTransfer.files]));
+$('tabs').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;S.filter=b.dataset.f;render()};
+$('tbl').onclick=e=>{
+  const s=e.target.closest('[data-s]');
+  if(s){const k=s.dataset.s;S.sort=S.sort.k===k?{k,dir:-S.sort.dir}:{k,dir:k==='t'?1:-1};render();return}
+  const r=e.target.closest('tr.row');if(r){const t=r.dataset.t;open.has(t)?open.delete(t):open.add(t);render()}
+};
+$('tbl').onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('tr.row')){e.preventDefault();e.target.click()}};
+$('q').oninput=e=>{S.q=e.target.value.trim();render()};
+$('pct').oninput=$('abs').oninput=()=>{if(S.ledger&&S.cost)compute()};
+$('copy').onclick=async()=>{
+  const list=visible();
+  const tsv=['رقم الطلب\tمستند التكلفة\tالمدين\tمرتجع\tالدائن\tالفرق\tالحالة',...list.map(r=>[r.t,r.docs.join(' + '),r.debit??'',r.refund||'',r.docs.length?r.credit:'',r.diff??'',STATUS[r.st]].join('\t'))].join('\n');
+  try{await navigator.clipboard.writeText(tsv);$('copy').textContent='تم النسخ'}
+  catch{const ta=document.createElement('textarea');ta.value=tsv;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');$('copy').textContent='تم النسخ'}catch{$('copy').textContent='تعذر النسخ'}ta.remove()}
+  setTimeout(()=>$('copy').textContent='نسخ الجدول لإكسل',1800);
+};
+</script>
+
+</body></html>
