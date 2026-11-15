@@ -276,9 +276,18 @@
   function getRecords() {
     return openDb().then(function (db) {
       return new Promise(function (resolve, reject) {
-        var req = db.transaction('uploads', 'readonly').objectStore('uploads').getAll();
-        req.onsuccess = function () { resolve((req.result || []).sort(function (a, b) { return b.savedAt - a.savedAt; })); };
-        req.onerror = function () { reject(req.error); };
+        var tx = db.transaction('uploads', 'readonly');
+        var cursor = tx.objectStore('uploads').index('savedAt').openCursor(null, 'prev');
+        var records = [];
+        cursor.onsuccess = function () {
+          var item = cursor.result;
+          if (item && records.length < 100) {
+            records.push(item.value);
+            item.continue();
+          } else resolve(records);
+        };
+        cursor.onerror = function () { reject(cursor.error); };
+        tx.onerror = function () { reject(tx.error); };
       });
     });
   }
