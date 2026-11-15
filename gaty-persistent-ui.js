@@ -46,7 +46,7 @@
     if (href.indexOf('about:srcdoc') === 0 || href === 'about:blank') {
       try {
         var frame = win.frameElement;
-        if (frame) return 'srcdoc:' + (frame.id || frame.getAttribute('title') || 'frame');
+        if (frame) return 'srcdoc:' + (frame.id || 'frame') + ':' + (frame.getAttribute('title') || doc.title || '');
       } catch (_) {}
     }
     if (path) return path;
