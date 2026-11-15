@@ -64,10 +64,48 @@
   function snapshot(records) {
     return { docs: records.map(item => ({ id: item.id, data: () => item.value })) };
   }
+  const SHARED_CORRECTIONS_KEY = 'gaty_inventory_cost_reference_corrections_v1';
+  const normCorrection = value => String(value ?? '').normalize('NFKC').replace(/\s+/g, '').trim().toUpperCase();
+  const correctionDocId = wrong => 'm_' + encodeURIComponent(String(wrong ?? '')).replace(/%/g, '_');
+  function readSharedCorrections() {
+    try {
+      const value = JSON.parse(localStorage.getItem(SHARED_CORRECTIONS_KEY) || '[]');
+      return Array.isArray(value) ? value.filter(item => item && String(item.wrong || '').trim() && String(item.correct || '').trim()) : [];
+    } catch { return []; }
+  }
+  function writeSharedCorrections(value) {
+    localStorage.setItem(SHARED_CORRECTIONS_KEY, JSON.stringify(value));
+    try { window.dispatchEvent(new CustomEvent('gaty-reference-corrections-updated')); } catch {}
+  }
+  async function readSharedMapRecords(migrate) {
+    let corrections = readSharedCorrections();
+    if (migrate) {
+      const addOld = (wrong, correct) => {
+        wrong = String(wrong ?? '').trim();
+        correct = String(correct ?? '').trim();
+        if (!wrong || !correct || corrections.some(item => normCorrection(item.wrong) === normCorrection(wrong))) return;
+        corrections.push({ wrong, correct });
+      };
+      try {
+        const legacy = JSON.parse(localStorage.getItem('so_wip_order_map') || '{}');
+        if (legacy && typeof legacy === 'object' && !Array.isArray(legacy)) {
+          Object.entries(legacy).forEach(([wrong, correct]) => addOld(wrong, correct));
+        }
+      } catch {}
+      try {
+        (await readAll('order_map')).forEach(item => addOld(item.value && item.value.from, item.value && item.value.to));
+      } catch {}
+      const before = JSON.stringify(readSharedCorrections());
+      if (JSON.stringify(corrections) !== before) {
+        try { writeSharedCorrections(corrections); } catch {}
+      }
+    }
+    return corrections.map(item => ({ id: correctionDocId(item.wrong), value: { from: item.wrong, to: item.correct } }));
+  }
   async function notify(name) {
     const set = listeners.get(name);
     if (!set || !set.size) return;
-    const records = await readAll(name);
+    const records = name === 'order_map' ? await readSharedMapRecords(false) : await readAll(name);
     set.forEach(callback => callback(snapshot(records)));
   }
   function collection(name) {
@@ -75,32 +113,61 @@
       doc(id) {
         const key = id || ('d_' + crypto.randomUUID());
         return {
-          async set(value) { await write(name, key, value); },
+          async set(value) {
+            if (name !== 'order_map') return write(name, key, value);
+            const corrections = readSharedCorrections();
+            const from = String(value && value.from || '').trim();
+            const to = String(value && value.to || '').trim();
+            if (!from || !to) return;
+            const index = corrections.findIndex(item => normCorrection(item.wrong) === normCorrection(from));
+            if (index >= 0) corrections[index] = { wrong: corrections[index].wrong, correct: to };
+            else corrections.push({ wrong: from, correct: to });
+            writeSharedCorrections(corrections);
+            await notify(name);
+          },
           async get() {
+            if (name === 'order_map') {
+              const records = await readSharedMapRecords(false);
+              const found = records.find(item => item.id === key);
+              return { exists: !!found, data: () => found && found.value };
+            }
             const db = await openDb();
             const value = await requestValue(db.transaction(name, 'readonly').objectStore(name).get(key));
             return { exists: value !== undefined, data: () => value };
           },
-          async delete() { await remove(name, key); }
+          async delete() {
+            if (name !== 'order_map') return remove(name, key);
+            const corrections = readSharedCorrections().filter(item => correctionDocId(item.wrong) !== key);
+            writeSharedCorrections(corrections);
+            await notify(name);
+          }
         };
       },
       onSnapshot(callback, onError) {
         let set = listeners.get(name);
         if (!set) listeners.set(name, set = new Set());
         set.add(callback);
-        (async () => {
-          let records = await readAll(name);
-          if (name === 'order_map' && records.length === 0) {
-            let legacy = {};
-            try { legacy = JSON.parse(localStorage.getItem('so_wip_order_map') || '{}') || {}; } catch {}
-            for (const [from, to] of Object.entries(legacy)) {
-              if (from && to) await write(name, 'm_' + encodeURIComponent(from).replace(/%/g, '_'), { from, to });
-            }
-            records = await readAll(name);
+        let active = true;
+        const deliver = () => {
+          const task = name === 'order_map' ? readSharedMapRecords(true) : readAll(name);
+          task.then(records => { if (active) callback(snapshot(records)); }).catch(error => { if (active && onError) onError(error); });
+        };
+        const storageListener = event => {
+          if (name === 'order_map' && (!event.key || event.key === SHARED_CORRECTIONS_KEY)) deliver();
+        };
+        if (name === 'order_map') {
+          window.addEventListener('storage', storageListener);
+          window.addEventListener('gaty-reference-corrections-updated', storageListener);
+        }
+        deliver();
+        return () => {
+          active = false;
+          set.delete(callback);
+          if (name === 'order_map') {
+            window.removeEventListener('storage', storageListener);
+            window.removeEventListener('gaty-reference-corrections-updated', storageListener);
           }
-          callback(snapshot(records));
-        })().catch(error => { if (onError) onError(error); });
-        return () => set.delete(callback);
+        };
       }
     };
   }
