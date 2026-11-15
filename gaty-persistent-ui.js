@@ -171,6 +171,15 @@
     }
     return input.parentElement || input.ownerDocument.body;
   }
+  function uiLanguage(doc) {
+    return (doc.documentElement && doc.documentElement.lang) || 'ar';
+  }
+  function authenticatedForTools() {
+    try {
+      var stamp = Number(localStorage.getItem('gaty_apps_gate') || 0);
+      return stamp > 0 && Date.now() - stamp < 3600000;
+    } catch (_) { return false; }
+  }
   function overrides() {
     try {
       var value = JSON.parse(localStorage.getItem(OVERRIDES_KEY) || '{}');
@@ -200,6 +209,7 @@
     var inputs = fileInputs(doc);
     inputs.forEach(function (input, index) {
       var zone = uploadZone(input);
+      var candidateIndex = 0;
       var nodes = zone.querySelectorAll('strong,span,p,small,label,h1,h2,h3,h4,button,a,div');
       Array.prototype.forEach.call(nodes, function (el) {
         if (el === zone || el.contains(input) || seen.has(el)) return;
@@ -209,7 +219,7 @@
         if (!direct.length && el.children.length) return;
         if (el.matches('button,a') && /download|export|تحميل|تنزيل|excel|اكسل/i.test(text)) return;
         seen.add(el);
-        results.push({ el: el, key: pageScope(doc) + '|upload:' + inputKey(input, index, doc) + '|text:' + results.length });
+        results.push({ el: el, key: pageScope(doc) + '|lang:' + uiLanguage(doc) + '|upload:' + inputKey(input, index, doc) + '|text:' + candidateIndex++ });
       });
     });
     var downloads = Array.prototype.slice.call(doc.querySelectorAll('button,a[download],a[href]')).filter(function (el) {
@@ -219,7 +229,7 @@
     downloads.forEach(function (el, index) {
       var nodes = el.querySelectorAll('span,strong');
       var target = directTextNodes(el).length ? el : (nodes.length ? nodes[nodes.length - 1] : el);
-      var key = pageScope(doc) + '|download:' + (el.id || el.getAttribute('data-action') || index);
+      var key = pageScope(doc) + '|lang:' + uiLanguage(doc) + '|download:' + (el.id || el.getAttribute('data-action') || index);
       if (!seen.has(target)) {
         seen.add(target);
         results.push({ el: target, key: key });
@@ -368,7 +378,7 @@
   function initReadyDocument(doc) {
     if (!doc || doc.__gatyPersistentUiReady) return;
     doc.__gatyPersistentUiReady = true;
-    addToolbar(doc);
+    if (authenticatedForTools()) addToolbar(doc);
     doc.addEventListener('change', function (event) {
       if (event.target && event.target.matches && event.target.matches('input[type="file"]')) saveInput(event.target);
     }, true);
