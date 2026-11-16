@@ -174,10 +174,17 @@
   function uiLanguage(doc) {
     return (doc.documentElement && doc.documentElement.lang) || 'ar';
   }
-  function authenticatedForTools() {
+  function authenticatedForTools(doc) {
     try {
       var stamp = Number(localStorage.getItem('gaty_apps_gate') || 0);
-      return stamp > 0 && Date.now() - stamp < 3600000;
+      if (stamp > 0 && Date.now() - stamp < 3600000) return true;
+    } catch (_) {}
+    // The main app exposes this admin-only panel after a successful administrator login.
+    // Use it as a fallback when the module gate timestamp is not present in this document.
+    try {
+      return !!doc && Array.prototype.some.call(doc.querySelectorAll('.card-title,h1,h2,h3'), function (el) {
+        return /إدارة دخول المستخدمين للتبويبات|إدارة دخول/.test(el.textContent || '');
+      });
     } catch (_) { return false; }
   }
   function overrides() {
@@ -370,7 +377,7 @@
     if (observerTimers.has(doc)) clearTimeout(observerTimers.get(doc));
     observerTimers.set(doc, setTimeout(function () {
       observerTimers.delete(doc);
-      if (authenticatedForTools() && !doc.getElementById('gaty-persist-tools')) addToolbar(doc);
+      if (authenticatedForTools(doc) && !doc.getElementById('gaty-persist-tools')) addToolbar(doc);
       applyOverrides(doc);
       markEditTargets(doc);
       restoreInputs(doc);
@@ -388,7 +395,7 @@
   function initReadyDocument(doc) {
     if (!doc || doc.__gatyPersistentUiReady) return;
     doc.__gatyPersistentUiReady = true;
-    if (authenticatedForTools()) addToolbar(doc);
+    if (authenticatedForTools(doc)) addToolbar(doc);
     doc.addEventListener('change', function (event) {
       if (event.target && event.target.matches && event.target.matches('input[type="file"]')) saveInput(event.target);
     }, true);
