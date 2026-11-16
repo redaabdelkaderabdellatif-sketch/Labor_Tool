@@ -183,7 +183,7 @@
     // Use it as a fallback when the module gate timestamp is not present in this document.
     try {
       return !!doc && Array.prototype.some.call(doc.querySelectorAll('.card-title,h1,h2,h3'), function (el) {
-        return /إدارة دخول المستخدمين للتبويبات|إدارة دخول/.test(el.textContent || '');
+        return /إدارة .*صلاحيات التبويبات|إدارة دخول/.test(el.textContent || '');
       });
     } catch (_) { return false; }
   }
