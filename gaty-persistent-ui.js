@@ -384,8 +384,8 @@
     }, 120));
   }
   function initDocument(doc) {
-    if (!doc || !doc.defaultView || doc.defaultView.__gatyPersistentUiInstalled) return;
-    doc.defaultView.__gatyPersistentUiInstalled = true;
+    if (!doc || !doc.defaultView || doc.__gatyPersistentUiDocumentInitialized) return;
+    doc.__gatyPersistentUiDocumentInitialized = true;
     if (!doc.body) {
       doc.addEventListener('DOMContentLoaded', function () { initReadyDocument(doc); }, { once: true });
       return;
