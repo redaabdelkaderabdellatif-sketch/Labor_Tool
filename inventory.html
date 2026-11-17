@@ -28,4 +28,5 @@ function stockPage(){let rows=stockRows(),sub={},gl={};for(let r of rows){let a=
 function backup(){let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gaty_accounting_inventory_backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}nav();
 </script>
 <script src="gaty-persistent-ui.js?v=20261116-persist5"></script>
+<script src="gaty-dropbox-sync.js?v=20261117-dropbox1"></script>
 </body></html>
