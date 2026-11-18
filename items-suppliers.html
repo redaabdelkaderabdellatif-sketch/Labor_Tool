@@ -168,7 +168,7 @@ footer{text-align:center;color:var(--muted);padding:16px;font-size:13px}
       return supplierTotals.get(key);
     }
     for(const inv of invoices)supplierBucket(inv.supplier).invoices+=Number(inv.net)||0;
-    for(const ret of returns)supplierBucket(ret.supplier).returns+=Math.abs(Number(ret.net)||0);
+    for(const ret of returns){const linked=(allInvByNo.get(ret.key)||[])[0];supplierBucket(linked?linked.supplier:ret.supplier).returns+=Math.abs(Number(ret.net)||0);}
     const supplierRows=Array.from(supplierTotals.values()).map(v=>({name:v.name,invoices:v.invoices,returns:v.returns,net:v.invoices-v.returns})).sort((a,b)=>b.net-a.net);
     const itemTotals=new Map();
     if(state.items){
@@ -182,11 +182,12 @@ footer{text-align:center;color:var(--muted);padding:16px;font-size:13px}
       }
     }
     const itemRows=Array.from(itemTotals.values()).sort((a,b)=>b.amount-a.amount);
-    const topSupplier=supplierRows[0],topItem=itemRows[0],analysis=[
+    const topSupplier=supplierRows[0],topItem=itemRows[0],topItemQty=itemRows.slice().sort((a,b)=>b.qty-a.qty)[0],analysis=[
       ['تحليل المشتريات'],
       ['الفترة',from?iso(from):'كل الفترات','إلى',to?iso(to):'كل الفترات'],
       ['أعلى مورد صافي شراءً بعد المرتجعات',topSupplier?topSupplier.name:'—',topSupplier?topSupplier.net:'—'],
-      ['أعلى صنف شراءً',state.items?(topItem?topItem.name:'لا توجد تفاصيل أصناف في الفترة'):'ارفع تقرير مشتريات الصنف الاختياري',state.items&&topItem?topItem.amount:'—'],
+      ['أعلى صنف قيمة شراء',state.items?(topItem?topItem.name:'لا توجد تفاصيل أصناف في الفترة'):'ارفع تقرير مشتريات الصنف الاختياري',state.items&&topItem?topItem.amount:'—'],
+      ['أكثر صنف كمية شراء',state.items?(topItemQty?topItemQty.name:'لا توجد تفاصيل أصناف في الفترة'):'ارفع تقرير مشتريات الصنف الاختياري',state.items&&topItemQty?topItemQty.qty:'—'],
       ['ملاحظة الأصناف',state.items?'قيمة الصنف حسب تقرير بنود المشتريات؛ تقرير المرتجعات لا يحدد الأصناف المرتجعة.':'تحليل الأصناف يحتاج تقرير مشتريات الصنف الاختياري.'],
       [],
       ['المورد','إجمالي فواتير الشراء','إجمالي المرتجعات','صافي الشراء بعد المرتجعات']
@@ -204,7 +205,7 @@ footer{text-align:center;color:var(--muted);padding:16px;font-size:13px}
     analysisWs['!cols']=[{wch:34},{wch:46},{wch:22},{wch:22},{wch:30}];
     analysisWs['!freeze']={xSplit:0,ySplit:1};
     if(supplierRows.length)analysisWs['!autofilter']={ref:'A'+supplierHeaderRow+':D'+(supplierHeaderRow+supplierRows.length)};
-    moneyFormat(analysisWs,3,4,[2]);
+    moneyFormat(analysisWs,3,4,[2]);moneyFormat(analysisWs,5,5,[2]);
     if(supplierRows.length)moneyFormat(analysisWs,supplierHeaderRow+1,supplierHeaderRow+supplierRows.length,[1,2,3]);
     if(itemRows.length)moneyFormat(analysisWs,itemHeaderRow+1,itemHeaderRow+itemRows.length,[4]);
     XLSX.utils.book_append_sheet(wb,analysisWs,'تحليل المشتريات');
