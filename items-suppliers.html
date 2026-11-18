@@ -209,6 +209,27 @@ footer{text-align:center;color:var(--muted);padding:16px;font-size:13px}
     if(supplierRows.length)moneyFormat(analysisWs,supplierHeaderRow+1,supplierHeaderRow+supplierRows.length,[1,2,3]);
     if(itemRows.length)moneyFormat(analysisWs,itemHeaderRow+1,itemHeaderRow+itemRows.length,[4]);
     XLSX.utils.book_append_sheet(wb,analysisWs,'تحليل المشتريات');
+
+    const itemAnalysis=[
+      ['تحليل الأصناف'],
+      ['الفترة',from?iso(from):'كل الفترات','إلى',to?iso(to):'كل الفترات'],
+      ['عدد الأصناف',state.items?itemRows.length:'—','إجمالي قيمة الشراء',state.items?itemRows.reduce((total,item)=>total+item.amount,0):'—'],
+      ['رمز الصنف','اسم الصنف','الوحدة','إجمالي الكمية','إجمالي قيمة الشراء']
+    ];
+    if(state.items){
+      if(itemRows.length)itemRows.forEach(item=>itemAnalysis.push([item.code,item.name,item.unit,item.qty,item.amount]));
+      else itemAnalysis.push(['','','','','لا توجد أصناف مشتراة في الفترة المحددة']);
+    }else itemAnalysis.push(['','','','','ارفع تقرير مشتريات الصنف لإظهار الإجماليات']);
+    const itemAnalysisWs=XLSX.utils.aoa_to_sheet(itemAnalysis);
+    itemAnalysisWs['!cols']=[{wch:22},{wch:48},{wch:18},{wch:22},{wch:28}];
+    itemAnalysisWs['!freeze']={xSplit:0,ySplit:4};
+    if(itemRows.length)itemAnalysisWs['!autofilter']={ref:'A4:E'+(4+itemRows.length)};
+    if(itemRows.length){
+      moneyFormat(itemAnalysisWs,5,4+itemRows.length,[4]);
+      for(let row=5;row<5+itemRows.length;row++){const cell=itemAnalysisWs[XLSX.utils.encode_cell({r:row-1,c:3})];if(cell&&typeof cell.v==='number')cell.z='#,##0.###'}
+      const totalCell=itemAnalysisWs['D3'];if(totalCell&&typeof totalCell.v==='number')totalCell.z='#,##0.00;[Red]-#,##0.00';
+    }
+    XLSX.utils.book_append_sheet(wb,itemAnalysisWs,'تحليل الأصناف');
     const file='مستر_مشتريات_الأصناف_والموردين_'+(from?iso(from):'')+'_'+(to?iso(to):'')+'.xlsx';const bytes=XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true});const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);el('runStatus').className='status success';el('runStatus').textContent='بدأ تنزيل المستر شيت: '+file+' — '+invoices.length+' فاتورة، '+returns.length+' مرتجع، '+(data.length-1)+' حركة.';
   }
   el('invoiceFile').addEventListener('change',()=>loadFile('invoiceFile','invoice').then(persist));el('returnFile').addEventListener('change',()=>loadFile('returnFile','return').then(persist));el('itemFile').addEventListener('change',()=>loadFile('itemFile','items').then(persist));el('generateBtn').addEventListener('click',()=>{try{runReport()}catch(err){el('runStatus').className='status error';el('runStatus').textContent='تعذر إنشاء الملف: '+(err&&err.message?err.message:'خطأ غير معروف');}});setFileStatus();
