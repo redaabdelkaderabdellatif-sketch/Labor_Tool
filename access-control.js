@@ -637,3 +637,35 @@ ${indent}const overdueByDays = typeof term.creditPeriodDays === 'number' ? Math.
 
   if (patchedSource !== supplierSource) GATY_MODULE_DOCS.suppliers = patchedSource;
 })();
+
+/* GATY SUPPLIER OVER-LIMIT EXPOSURE PATCH V2 */
+(function () {
+  if (typeof GATY_MODULE_DOCS === "undefined" || typeof GATY_MODULE_DOCS.suppliers !== "string") return;
+  const LF = String.fromCharCode(10);
+  const CRLF = String.fromCharCode(13) + LF;
+
+  function replaceCalculation(source, indent) {
+    const original = [
+      `${indent}const overLimitBy = typeof term.creditLimit === 'number' ? Math.max(0, result.totalOpen - term.creditLimit) : null;`,
+      `${indent}const overdueByDays = typeof term.creditPeriodDays === 'number' ? Math.max(0, result.maxOpenAgeDays - term.creditPeriodDays) : null;`
+    ].join(LF);
+    const replacement = [
+      `${indent}const creditLimitExposure = typeof term.creditLimit === 'number' ? Math.max(0, result.totalOpen - term.creditLimit) : null;`,
+      `${indent}const creditPeriodExposure = typeof term.creditPeriodDays === 'number'`,
+      `${indent}  ? result.transactions.reduce((sum, txn) => {`,
+      `${indent}      const ageDays = Math.floor((today - txn.date) / 86400000);`,
+      `${indent}      return ageDays > term.creditPeriodDays ? sum + txn.remainingOpen : sum;`,
+      `${indent}    }, 0)`,
+      `${indent}  : null;`,
+      `${indent}const exposures = [creditLimitExposure, creditPeriodExposure].filter(value => typeof value === 'number' && value > 0.005);`,
+      `${indent}const overLimitBy = exposures.length ? Math.min(...exposures) : 0;`,
+      `${indent}const overdueByDays = typeof term.creditPeriodDays === 'number' ? Math.max(0, result.maxOpenAgeDays - term.creditPeriodDays) : null;`
+    ].join(LF);
+    return source.replace(original.split(LF).join(CRLF), replacement.split(LF).join(CRLF)).replace(original, replacement);
+  }
+
+  let source = GATY_MODULE_DOCS.suppliers;
+  source = replaceCalculation(source, "    ");
+  source = replaceCalculation(source, "  ");
+  GATY_MODULE_DOCS.suppliers = source;
+})();
