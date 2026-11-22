@@ -669,3 +669,87 @@ ${indent}const overdueByDays = typeof term.creditPeriodDays === 'number' ? Math.
   source = replaceCalculation(source, "  ");
   GATY_MODULE_DOCS.suppliers = source;
 })();
+
+/* GATY SUPPLIER LAST PAYMENT AND EXPOSURE PATCH V3 */
+(function () {
+  if (typeof GATY_MODULE_DOCS === "undefined" || typeof GATY_MODULE_DOCS.suppliers !== "string") return;
+  const source = GATY_MODULE_DOCS.suppliers;
+  const scriptEnd = source.lastIndexOf("</script>");
+  if (scriptEnd < 0 || source.includes("gatySupplierLastPaymentV3")) return;
+
+  const injected = String.raw`
+/* Supplier report: last debit settlement and monetary credit-term exposure. */
+function gatySupplierLastPaymentV3(transactions) {
+  const payments = (transactions || []).filter(function (txn) {
+    return Number(txn.debit) > 0.005 && txn.date instanceof Date && !Number.isNaN(txn.date.getTime());
+  }).sort(function (a, b) { return b.date - a.date; });
+  return payments.length ? payments[0] : null;
+}
+function gatySupplierDateV3(value) {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return '';
+  return value.getFullYear() + '-' + String(value.getMonth() + 1).padStart(2, '0') + '-' + String(value.getDate()).padStart(2, '0');
+}
+function gatySupplierApplyExposureV3(result, today) {
+  const term = result.term || {};
+  const creditLimitExposure = typeof term.creditLimit === 'number' ? Math.max(0, result.totalOpen - term.creditLimit) : null;
+  const creditPeriodExposure = typeof term.creditPeriodDays === 'number'
+    ? result.transactions.reduce(function (sum, txn) {
+        const ageDays = Math.floor((today - txn.date) / 86400000);
+        return ageDays > term.creditPeriodDays ? sum + (Number(txn.remainingOpen) || 0) : sum;
+      }, 0)
+    : null;
+  const exposures = [creditLimitExposure, creditPeriodExposure].filter(function (value) {
+    return typeof value === 'number' && value > 0.005;
+  });
+  result.overLimitBy = exposures.length ? Math.min.apply(Math, exposures) : 0;
+  const payment = gatySupplierLastPaymentV3(result.transactions);
+  result.lastPaymentAmount = payment ? Number(payment.debit) : null;
+  result.lastPaymentDate = payment ? payment.date : null;
+}
+const gatySupplierOriginalRenderV3 = renderAgingTable;
+renderAgingTable = function () {
+  gatySupplierOriginalRenderV3.apply(this, arguments);
+  if (!state.agingResult) return;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  state.agingResult.perAccountResults.forEach(function (result) {
+    gatySupplierApplyExposureV3(result, today);
+  });
+  const rows = document.querySelectorAll('#aging-detail-body tr');
+  state.agingResult.perAccountResults.forEach(function (result, index) {
+    const row = rows[index];
+    const cell = row && row.cells[11];
+    if (cell) {
+      cell.textContent = result.overLimitBy > 0.005 ? result.overLimitBy.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—';
+      cell.style.color = result.overLimitBy > 0.005 ? 'var(--red)' : '';
+      cell.style.fontWeight = result.overLimitBy > 0.005 ? '700' : '';
+    }
+  });
+};
+downloadAgingResult = function () {
+  if (!state.agingResult) return;
+  const buckets = state.agingResult.buckets;
+  const perAccountResults = state.agingResult.perAccountResults;
+  const headers = ['Account Code', 'Supplier'].concat(buckets, ['Total Outstanding', 'Advance/Credit', 'Credit Limit', 'Credit Period (days)', 'Over Limit By', 'Overdue By (days)', 'Last Payment Amount', 'Last Payment Date']);
+  const data = perAccountResults.map(function (result) {
+    return [result.code, result.name].concat(result.buckets, [
+      result.totalOpen, result.prepayment,
+      result.term.creditLimit != null ? result.term.creditLimit : '',
+      result.term.creditPeriodDays != null ? result.term.creditPeriodDays : '',
+      result.overLimitBy > 0.005 ? result.overLimitBy : '',
+      result.overdueByDays > 0 ? result.overdueByDays : '',
+      result.lastPaymentAmount != null ? result.lastPaymentAmount : '',
+      gatySupplierDateV3(result.lastPaymentDate)
+    ]);
+  });
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers].concat(data));
+  ws['!cols'] = [{ wch: 14 }, { wch: 32 }].concat(buckets.map(function () { return { wch: 12 }; }), [{ wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 18 }]);
+  XLSX.utils.book_append_sheet(wb, ws, 'Supplier Aging');
+  const reportDate = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, 'SupplierAging_' + reportDate + '.xlsx');
+  ledgerLog('Downloaded aging report', 'ok');
+};
+`;
+  GATY_MODULE_DOCS.suppliers = source.slice(0, scriptEnd) + "\n" + injected + "\n" + source.slice(scriptEnd);
+})();
