@@ -425,3 +425,57 @@
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
   window.addEventListener('pageshow', function () { setTimeout(function () { restoreInputs(document); }, 500); });
 })();
+
+/* GATY SALES INVOICES RECEIPTS REQUIRED V1 */
+(function () {
+  function applySalesInvoicesReceiptRule(doc) {
+    if (!doc || !doc.defaultView || doc.__gatySalesInvoicesReceiptRule) return;
+    if (!/فواتير المبيعات|Sales Invoices/i.test((doc.title || '') + ' ' + (doc.querySelector('header') || {}).textContent)) return;
+    var receiptInput = doc.getElementById('receiptFile');
+    var orderHeading = doc.getElementById('orderDrop') && doc.getElementById('orderDrop').closest('.card') && doc.getElementById('orderDrop').closest('.card').querySelector('h2');
+    var receiptHeading = doc.getElementById('receiptDrop') && doc.getElementById('receiptDrop').closest('.card') && doc.getElementById('receiptDrop').closest('.card').querySelector('h2');
+    var receiptStatus = doc.getElementById('receiptStatus');
+    var download = doc.getElementById('download');
+    if (!receiptInput || !download) return;
+    doc.__gatySalesInvoicesReceiptRule = true;
+
+    if (orderHeading) orderHeading.textContent = 'تقرير طلبات البيع للمطابقة (اختياري)';
+    if (receiptHeading) receiptHeading.textContent = 'سندات القبض (إجباري)';
+
+    function hasReceipt() {
+      try {
+        return !!((receiptInput.files && receiptInput.files.length) || (doc.defaultView.receiptRows && doc.defaultView.receiptRows.length));
+      } catch (_) { return false; }
+    }
+    function refreshRule() {
+      var loaded = hasReceipt();
+      if (!loaded) {
+        download.disabled = true;
+        if (receiptStatus) receiptStatus.textContent = 'ارفع شيت سندات القبض أولًا؛ هو ملف إلزامي لتنزيل تقرير الفواتير. تقرير طلبات البيع اختياري.';
+      } else if (receiptStatus && !String(receiptStatus.textContent || '').includes('تم تحميل')) {
+        receiptStatus.textContent = 'تم تحميل سندات القبض. تقرير طلبات البيع اختياري للمطابقة.';
+      }
+    }
+    receiptInput.addEventListener('change', function () { setTimeout(refreshRule, 0); }, true);
+    doc.addEventListener('click', function (event) {
+      if (event.target === download && !hasReceipt()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (receiptStatus) receiptStatus.textContent = 'ارفع شيت سندات القبض أولًا؛ هو ملف إلزامي لتنزيل تقرير الفواتير.';
+      }
+    }, true);
+    refreshRule();
+  }
+
+  function scan() {
+    applySalesInvoicesReceiptRule(document);
+    Array.prototype.forEach.call(document.querySelectorAll('iframe'), function (frame) {
+      try { applySalesInvoicesReceiptRule(frame.contentDocument); } catch (_) {}
+      frame.addEventListener('load', function () {
+        try { applySalesInvoicesReceiptRule(frame.contentDocument); } catch (_) {}
+      }, { once: true });
+    });
+  }
+  scan();
+  new MutationObserver(scan).observe(document.documentElement, { childList: true, subtree: true });
+})();
