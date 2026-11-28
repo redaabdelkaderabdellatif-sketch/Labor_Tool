@@ -94,7 +94,7 @@ footer{text-align:center;color:var(--muted);padding:16px;font-size:13px}
     <label class="upload" id="cardInvoice"><span class="lbl"><strong>تقرير فواتير المشتريات</strong><small>يحتوي على رقم الفاتورة والتاريخ والمورد والمبالغ.</small></span><span class="ctl"><input id="invoiceFile" type="file" accept=".xlsx,.xls,.csv"><span class="filename" id="nameInvoice"></span></span></label>
     <label class="upload" id="cardReturn"><span class="lbl"><strong>تقرير مرتجعات المشتريات</strong><small>تُخصم المرتجعات بحسب تاريخ المرتجع، وتُربط بالمورد عبر رقم فاتورة الشراء.</small></span><span class="ctl"><input id="returnFile" type="file" accept=".xlsx,.xls,.csv"><span class="filename" id="nameReturn"></span></span></label>
     <label class="upload" id="cardItem"><span class="lbl"><strong>تقرير مشتريات الصنف <span class="opt">(اختياري)</span></strong><small>لملء تقريري الصنف والمورد. يربط الموقع كل صنف بالمورد من خلال رقم الفاتورة.</small></span><span class="ctl"><input id="itemFile" type="file" accept=".xlsx,.xls,.csv"><span class="filename" id="nameItem"></span></span></label>
-    <div class="note">تقرير المرتجعات لا يذكر الصنف المرتجع؛ لذلك يُخصم من إجمالي الفترة والمورد فقط، ولا يُوزّع على الأصناف.</div>
+    <div class="note">تقرير المرتجعات لا يذكر الصنف المرتجع؛ لذلك لا يُوزّع على الأصناف. يظهر صافي إجمالي الأصناف بعد خصم المرتجعات، وتظهر المرتجعات غير الموزعة في صف مستقل.</div>
     <div id="fileStatus" class="status" aria-live="polite"></div>
     <div id="fileCounts" class="counts"></div>
     <div id="savedInfo" class="note" hidden></div>
@@ -182,6 +182,9 @@ footer{text-align:center;color:var(--muted);padding:16px;font-size:13px}
       }
     }
     const itemRows=Array.from(itemTotals.values()).sort((a,b)=>b.amount-a.amount);
+    const itemGrossTotal=itemRows.reduce((total,item)=>total+(Number(item.amount)||0),0);
+    const itemReturnTotal=returns.reduce((total,ret)=>total+Math.abs(Number(ret.net)||0),0);
+    const itemNetTotal=itemGrossTotal-itemReturnTotal;
     const topSupplier=supplierRows[0],topItem=itemRows[0],topItemQty=itemRows.slice().sort((a,b)=>b.qty-a.qty)[0],analysis=[
       ['تحليل المشتريات'],
       ['الفترة',from?iso(from):'كل الفترات','إلى',to?iso(to):'كل الفترات'],
@@ -213,12 +216,16 @@ footer{text-align:center;color:var(--muted);padding:16px;font-size:13px}
     const itemAnalysis=[
       ['تحليل الأصناف'],
       ['الفترة',from?iso(from):'كل الفترات','إلى',to?iso(to):'كل الفترات'],
-      ['عدد الأصناف',state.items?itemRows.length:'—','إجمالي قيمة الشراء',state.items?itemRows.reduce((total,item)=>total+item.amount,0):'—'],
-      ['رمز الصنف','اسم الصنف','الوحدة','إجمالي الكمية','إجمالي قيمة الشراء']
+      ['عدد الأصناف',state.items?itemRows.length:'—','صافي قيمة الأصناف بعد المرتجعات',state.items?itemNetTotal:'—'],
+      ['رمز الصنف','اسم الصنف','الوحدة','إجمالي الكمية','قيمة الشراء قبل المرتجعات']
     ];
     if(state.items){
-      if(itemRows.length)itemRows.forEach(item=>itemAnalysis.push([item.code,item.name,item.unit,item.qty,item.amount]));
-      else itemAnalysis.push(['','','','','لا توجد أصناف مشتراة في الفترة المحددة']);
+      if(itemRows.length){
+        itemRows.forEach(item=>itemAnalysis.push([item.code,item.name,item.unit,item.qty,item.amount]));
+        itemAnalysis.push([]);
+        itemAnalysis.push(['مرتجعات غير موزعة على الأصناف','','','',-itemReturnTotal]);
+        itemAnalysis.push(['صافي إجمالي الأصناف بعد المرتجعات','','','',itemNetTotal]);
+      }else itemAnalysis.push(['','','','','لا توجد أصناف مشتراة في الفترة المحددة']);
     }else itemAnalysis.push(['','','','','ارفع تقرير مشتريات الصنف لإظهار الإجماليات']);
     const itemAnalysisWs=XLSX.utils.aoa_to_sheet(itemAnalysis);
     itemAnalysisWs['!cols']=[{wch:22},{wch:48},{wch:18},{wch:22},{wch:28}];
